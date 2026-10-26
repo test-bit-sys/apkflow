@@ -1,0 +1,48 @@
+{
+  "name": "apkflow",
+  "version": "1.0.0",
+  "description": "Visual Mobile App Reverse-Engineering & Architecture Reconstruction Tool",
+  "main": "dist/server.js",
+  "type": "module",
+  "bin": {
+    "apkflow": "./dist/cli.js"
+  },
+  "scripts": {
+    "start": "tsx src/cli.ts",
+    "dev": "tsx watch src/cli.ts",
+    "build:server": "tsc",
+    "build:client": "cd client && npm run build",
+    "build": "npm run build:server && npm run build:client",
+    "lint": "echo \"No linter configured\""
+  },
+  "keywords": [
+    "reverse-engineering",
+    "android",
+    "apk",
+    "security",
+    "architecture",
+    "flowchart",
+    "code-generator",
+    "rea",
+    "frida",
+    "api"
+  ],
+  "author": "Antigravity & Pair",
+  "license": "MIT",
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1",
+    "open": "^10.1.0"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^22.13.9",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}
