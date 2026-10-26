@@ -226,7 +226,13 @@ export class AxmlDecoder {
     }
 
     const permissions = strings.filter(s => s.startsWith('android.permission.') || s.includes('.permission.'));
-    const packageCandidate = strings.find(s => s.split('.').length >= 3 && !s.startsWith('android.') && !s.includes('permission')) || 'com.example.app';
+    const packageCandidate = strings.find(s => 
+      s.split('.').length >= 3 && 
+      !s.startsWith('android.') && 
+      !s.includes('schemas') &&
+      !s.includes('permission') &&
+      !s.includes('w3.org')
+    ) || 'com.example.app';
     const activities = strings.filter(s => s.endsWith('Activity'));
 
     return {

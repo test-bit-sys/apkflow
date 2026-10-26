@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ApkFlow — Mobile App Reverse Engineering & Architecture Reconstruction</title>
+  <title>ApkFlow — Visual Mobile App Reverse Engineering & Reconstruction</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236366f1'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,259 +12,298 @@
 </head>
 <body>
 
-  <!-- Header -->
-  <header class="app-header">
-    <div class="brand">
-      <div class="brand-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-          <polyline points="2 17 12 22 22 17"></polyline>
-          <polyline points="2 12 12 17 22 12"></polyline>
-        </svg>
+  <!-- 1. Top Navbar (n8n Style) -->
+  <header class="n8n-header">
+    <div class="brand-section">
+      <div class="brand-icon-box">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
       </div>
       <div>
-        <h1 class="brand-title">ApkFlow</h1>
-        <p class="brand-subtitle">Visual App Reverse Engineering & Reconstruction</p>
+        <span class="brand-name">ApkFlow</span>
+      </div>
+
+      <div class="app-meta-badge">
+        <span style="color: var(--text-muted);">Target:</span>
+        <strong id="headerAppName" style="color: #fff;">Loading...</strong>
+        <span style="color: var(--border-node);">•</span>
+        <code id="headerAppPkg" style="color: var(--accent-cyan); font-family: var(--font-mono); font-size: 0.75rem;">...</code>
+        <span style="color: var(--border-node);">•</span>
+        <span id="headerAppFramework" class="badge" style="background: rgba(99, 102, 241, 0.2); color: #818cf8; font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 4px;">...</span>
       </div>
     </div>
 
-    <div style="display: flex; align-items: center; gap: 1rem;">
-      <button id="btnLoadDemo" class="btn btn-secondary">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-        Load Demo: SecureBank (BaridiMob)
+    <!-- Canvas Navigation Controls -->
+    <div class="canvas-controls">
+      <button id="btnZoomOut" class="control-btn" title="Zoom Out (Ctrl -)">−</button>
+      <button id="btnResetView" class="control-btn" title="Reset Canvas View" style="font-size: 0.75rem;">100%</button>
+      <button id="btnZoomIn" class="control-btn" title="Zoom In (Ctrl +)">+</button>
+    </div>
+
+    <!-- Header Quick Actions -->
+    <div class="header-actions">
+      <!-- Download Sample APK Button -->
+      <a href="/api/download-sample-apk" download="QuickPay-Sample.apk" class="btn btn-secondary" title="Download the generated test APK to test uploading" style="text-decoration: none;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Download Test APK
+      </a>
+
+      <!-- Quick Demo Switcher -->
+      <button id="btnQuickPayDemo" class="btn btn-secondary">
+        ⚡ QuickPay Demo
       </button>
-      <label for="fileUploadInput" class="btn btn-primary" style="cursor: pointer;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-        Analyze Any APK
+      <button id="btnBaridiDemo" class="btn btn-secondary">
+        ⚡ BaridiMob Demo
+      </button>
+
+      <!-- Upload APK Button -->
+      <label for="apkFileInput" class="btn btn-primary" style="cursor: pointer;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+        Upload APK
       </label>
-      <input type="file" id="fileUploadInput" accept=".apk,.xapk" style="display: none;">
+      <input type="file" id="apkFileInput" accept=".apk,.xapk" style="display: none;">
     </div>
   </header>
 
-  <!-- Active App Bar -->
-  <div class="active-app-bar">
-    <div class="app-meta-pill">
-      <span>Target App:</span>
-      <strong id="metaAppName">Loading...</strong>
+  <!-- 2. Central Infinite Canvas (n8n Workspace) -->
+  <main id="canvasContainer" class="canvas-container">
+    <div id="canvasWorld" class="canvas-world">
+      <!-- SVG dynamic bezier connecting cables -->
+      <svg id="connectionsSvg" class="connections-svg"></svg>
+
+      <!-- Nodes rendered dynamically here -->
+      <div id="nodesLayer"></div>
     </div>
-    <div class="app-meta-pill">
-      <span>Package:</span>
-      <code id="metaAppPkg" style="color: var(--accent-cyan);">...</code>
+  </main>
+
+  <!-- 3. Slide-out Inspector Drawer (n8n Node Settings) -->
+  <aside id="inspectorDrawer" class="inspector-drawer">
+    <div class="drawer-header">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <div id="drawerIcon" class="brand-icon-box" style="width: 32px; height: 32px;"></div>
+        <div>
+          <h3 id="drawerTitle" style="font-size: 1.1rem; font-weight: 700;">Node Title</h3>
+          <p id="drawerSubtitle" style="font-size: 0.78rem; color: var(--text-muted); font-family: var(--font-mono);">Subtitle</p>
+        </div>
+      </div>
+      <button id="btnCloseDrawer" class="btn btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.9rem;">✕</button>
     </div>
-    <div class="app-meta-pill">
-      <span>Version:</span>
-      <strong id="metaAppVersion">...</strong>
+
+    <!-- Drawer Tabs -->
+    <div class="drawer-tabs">
+      <button class="drawer-tab-btn active" data-drawer-tab="dtab-overview">Overview</button>
+      <button class="drawer-tab-btn" data-drawer-tab="dtab-endpoints">APIs & Schema</button>
+      <button class="drawer-tab-btn" data-drawer-tab="dtab-code">Step Code</button>
+      <button class="drawer-tab-btn" data-drawer-tab="dtab-security">Bypass & Hook</button>
     </div>
-    <div class="app-meta-pill">
-      <span>Framework:</span>
-      <span id="metaAppFramework" class="badge" style="background: rgba(99, 102, 241, 0.2); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.4);">Detecting...</span>
+
+    <!-- Drawer Body -->
+    <div class="drawer-body">
+      <!-- Tab 1: Overview -->
+      <div id="dtab-overview" class="drawer-pane">
+        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem;">
+          <h4 style="font-size: 0.88rem; font-weight: 600; color: var(--accent-cyan); margin-bottom: 0.35rem;">Component Lifecycle & Role</h4>
+          <p id="drawerDescription" style="color: var(--text-secondary); font-size: 0.88rem; line-height: 1.6;">Description</p>
+        </div>
+
+        <div id="drawerMetrics" style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <!-- Key-value metrics -->
+        </div>
+      </div>
+
+      <!-- Tab 2: Endpoints -->
+      <div id="dtab-endpoints" class="drawer-pane" style="display: none;">
+        <div id="drawerEndpointContent">
+          <!-- Populated -->
+        </div>
+      </div>
+
+      <!-- Tab 3: Step Code -->
+      <div id="dtab-code" class="drawer-pane" style="display: none;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+          <span style="font-size: 0.82rem; color: var(--text-muted);">Runnable snippet for this step:</span>
+          <button id="btnCopyStepCode" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">Copy Code</button>
+        </div>
+        <div class="code-box">
+          <div class="code-header-bar">
+            <span>TypeScript / Node.js</span>
+          </div>
+          <pre class="code-pre-area"><code id="drawerStepCode">// Code</code></pre>
+        </div>
+      </div>
+
+      <!-- Tab 4: Security & Bypass -->
+      <div id="dtab-security" class="drawer-pane" style="display: none;">
+        <div id="drawerSecurityContent">
+          <!-- Populated with Frida scripts -->
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 4. Bottom Floating Dock (n8n Tool Switcher) -->
+  <nav class="floating-dock">
+    <button class="dock-btn active" data-view="canvas">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+      Workflow Canvas
+    </button>
+    <button class="dock-btn" data-view="modal-code">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+      Full SDK Generator
+    </button>
+    <button class="dock-btn" data-view="modal-endpoints">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+      All Endpoints (<span id="dockEndpointCount">0</span>)
+    </button>
+    <button class="dock-btn" data-view="modal-security">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+      Security & Defenses
+    </button>
+    <button class="dock-btn" data-view="modal-blueprint">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+      Reconstruction Blueprint
+    </button>
+  </nav>
+
+  <!-- 5. Fullscreen Overlay Modals -->
+
+  <!-- Modal: Full SDK Generator -->
+  <div id="modal-code" class="full-modal">
+    <div class="modal-content-wrapper">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+        <div>
+          <h2 style="font-size: 1.5rem; font-weight: 700;">Full Client SDK Generator</h2>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">Complete, ready-to-execute API client script tailored to this app's authentication and signature requirements.</p>
+        </div>
+        <button class="btn btn-secondary btn-close-modal">✕ Close</button>
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-primary active-code-lang" data-sdk-lang="typescript">TypeScript (Node.js)</button>
+          <button class="btn btn-secondary" data-sdk-lang="python">Python</button>
+          <button class="btn btn-secondary" data-sdk-lang="curl">cURL Command</button>
+        </div>
+        <button id="btnCopyFullSdk" class="btn btn-primary">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          Copy Entire Client
+        </button>
+      </div>
+
+      <div class="code-box">
+        <div class="code-header-bar">
+          <span id="fullSdkLabel">TypeScript Client SDK (fetch / node:crypto)</span>
+          <span>Zero External Dependencies Required</span>
+        </div>
+        <pre class="code-pre-area"><code id="fullSdkCode">// Loading SDK...</code></pre>
+      </div>
     </div>
   </div>
 
-  <!-- Main Container -->
-  <main class="main-container">
-
-    <!-- Drag & Drop Zone -->
-    <div id="dropzone" class="dropzone-card">
-      <div class="dropzone-icon">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-          <polyline points="17 8 12 3 7 8"></polyline>
-          <line x1="12" y1="3" x2="12" y2="15"></line>
-        </svg>
-      </div>
-      <h3 class="dropzone-title">Drop an Android APK here to deconstruct its architecture</h3>
-      <p class="dropzone-desc">Analyzes manifest, DEX bytecode, JNI libraries, endpoints, encryption, and generates ready-to-run clients.</p>
-      
-      <div class="sample-selector">
-        <span style="font-size: 0.82rem; color: var(--text-muted);">Or explore sample architecture:</span>
-        <button id="btnQuickDemo" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">
-          ⚡ Explore BaridiMob Fintech Architecture
-        </button>
-      </div>
-    </div>
-
-    <!-- Navigation Tabs -->
-    <div class="tabs-header">
-      <div class="tabs-list">
-        <button class="tab-item active" data-tab="tab-flow">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-          Interactive Flowchart
-        </button>
-        <button class="tab-item" data-tab="tab-recipe">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-          Reconstruction Blueprint
-        </button>
-        <button class="tab-item" data-tab="tab-code">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-          Ready-to-Run Code
-        </button>
-        <button class="tab-item" data-tab="tab-endpoints">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-          Discovered Endpoints (<span id="tabEndpointCount">0</span>)
-        </button>
-        <button class="tab-item" data-tab="tab-security">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-          Security & Crypto
-        </button>
-      </div>
-
-      <div id="statusIndicator" style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">
-        <span class="pulse-dot"></span>
-        <span>Analysis Ready</span>
-      </div>
-    </div>
-
-    <!-- Tab 1: Flowchart Diagram -->
-    <section id="tab-flow" class="tab-panel">
-      <div style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between;">
-        <p style="font-size: 0.95rem; color: var(--text-secondary);">
-          Click any step in the flowchart to inspect its mechanics, security checks, and code implementation:
-        </p>
-        <span style="font-size: 0.8rem; color: var(--text-muted);">← Scroll horizontally to see full lifecycle →</span>
-      </div>
-
-      <div class="flow-diagram-wrapper">
-        <div id="flowTrack" class="flow-cards-track">
-          <!-- Dynamically populated by app.js -->
-        </div>
-      </div>
-
-      <!-- Selected Node Inspector Drawer -->
-      <div id="nodeInspector" class="inspector-drawer" style="display: none;">
-        <div class="drawer-header">
-          <div>
-            <span id="inspectBadge" class="badge">STEP</span>
-            <h3 id="inspectTitle" style="font-size: 1.25rem; font-weight: 700; margin-top: 0.35rem;">Node Title</h3>
-            <p id="inspectSubtitle" style="font-size: 0.85rem; color: var(--text-muted); font-family: var(--font-mono);">Subtitle</p>
-          </div>
-          <button id="btnCloseInspector" class="btn btn-secondary" style="padding: 0.3rem 0.6rem;">✕</button>
-        </div>
-        <div id="inspectContent" style="color: var(--text-secondary); line-height: 1.6; font-size: 0.92rem;">
-          <!-- Content dynamically rendered -->
-        </div>
-      </div>
-    </section>
-
-    <!-- Tab 2: Reconstruction Blueprint -->
-    <section id="tab-recipe" class="tab-panel" style="display: none;">
-      <div style="background: rgba(13, 17, 26, 0.6); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1.5rem;">
-        <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--accent-cyan);">
-          How This App Works In Plain English
-        </h3>
-        <p id="recipePlainEnglish" style="color: var(--text-secondary); line-height: 1.7; font-size: 0.95rem;">
-          Loading explanation...
-        </p>
-      </div>
-
-      <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem;">Step-by-Step Reconstruction & Reverse-Engineering Guide</h3>
-      <div id="recipeStepsList">
-        <!-- Steps rendered here -->
-      </div>
-    </section>
-
-    <!-- Tab 3: Ready-to-Run Code -->
-    <section id="tab-code" class="tab-panel" style="display: none;">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-        <div style="display: flex; gap: 0.5rem;">
-          <button class="btn btn-secondary active-lang" data-lang="typescript" style="background: var(--accent-indigo); color: #fff;">TypeScript (Node.js)</button>
-          <button class="btn btn-secondary" data-lang="python">Python</button>
-          <button class="btn btn-secondary" data-lang="curl">cURL Command</button>
-        </div>
+  <!-- Modal: All Endpoints -->
+  <div id="modal-endpoints" class="full-modal">
+    <div class="modal-content-wrapper">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
         <div>
-          <button id="btnCopySnippet" class="btn btn-primary">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            Copy Code
-          </button>
+          <h2 style="font-size: 1.5rem; font-weight: 700;">Discovered API Endpoints</h2>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">All HTTP/REST endpoints extracted from DEX bytecode and annotations.</p>
         </div>
+        <button class="btn btn-secondary btn-close-modal">✕ Close</button>
       </div>
 
-      <div class="code-container">
-        <div class="code-bar">
-          <span id="codeLangLabel">TypeScript Client SDK (fetch / node:crypto)</span>
-          <span>Fully Reproducible & Executable</span>
-        </div>
-        <pre id="codeDisplayArea" class="code-pre"><code>// Loading generated code...</code></pre>
-      </div>
-    </section>
-
-    <!-- Tab 4: Discovered Endpoints -->
-    <section id="tab-endpoints" class="tab-panel" style="display: none;">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
-        <input type="text" id="endpointSearchInput" placeholder="Filter endpoints (e.g. /auth, /balance, POST)..." 
-          style="background: var(--bg-secondary); border: 1px solid var(--border-medium); color: #fff; padding: 0.6rem 1rem; border-radius: var(--radius-md); font-family: var(--font-sans); width: 340px; font-size: 0.9rem;">
-        <div id="endpointFilterBadges" style="display: flex; gap: 0.4rem;">
-          <!-- Filter badges -->
-        </div>
+      <div style="margin-bottom: 1rem;">
+        <input type="text" id="modalEndpointSearch" placeholder="Filter endpoints (e.g. /auth, /wallet, POST)..." 
+          style="background: #111726; border: 1px solid var(--border-subtle); color: #fff; padding: 0.65rem 1rem; border-radius: 8px; width: 350px; font-size: 0.88rem; font-family: var(--font-sans);">
       </div>
 
-      <div style="background: rgba(13, 17, 26, 0.6); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); overflow: hidden;">
-        <table class="api-table">
+      <div style="background: var(--bg-node); border: 1px solid var(--border-subtle); border-radius: 12px; overflow: hidden;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
           <thead>
-            <tr>
-              <th>Method</th>
-              <th>Endpoint Path</th>
-              <th>Domain</th>
-              <th>Auth Type</th>
-              <th>Signature Required</th>
-              <th>Action</th>
+            <tr style="border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); text-align: left;">
+              <th style="padding: 0.85rem 1rem;">Method</th>
+              <th style="padding: 0.85rem 1rem;">Path</th>
+              <th style="padding: 0.85rem 1rem;">Domain</th>
+              <th style="padding: 0.85rem 1rem;">Auth Type</th>
+              <th style="padding: 0.85rem 1rem;">Signature</th>
+              <th style="padding: 0.85rem 1rem;">Action</th>
             </tr>
           </thead>
-          <tbody id="endpointTableBody">
-            <!-- Dynamically populated -->
+          <tbody id="modalEndpointBody">
+            <!-- Populated -->
           </tbody>
         </table>
       </div>
-    </section>
+    </div>
+  </div>
 
-    <!-- Tab 5: Security & Crypto -->
-    <section id="tab-security" class="tab-panel" style="display: none;">
+  <!-- Modal: Security Audit -->
+  <div id="modal-security" class="full-modal">
+    <div class="modal-content-wrapper">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+        <div>
+          <h2 style="font-size: 1.5rem; font-weight: 700;">Security & Cryptographic Audit</h2>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">Reverse-engineering evaluation of protections, defenses, and encryption algorithms.</p>
+        </div>
+        <button class="btn btn-secondary btn-close-modal">✕ Close</button>
+      </div>
+
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-        
-        <!-- Root Detection Card -->
-        <div class="recipe-step-card">
+        <!-- Root Card -->
+        <div style="background: var(--bg-node); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1.25rem;">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-            <h4 style="font-size: 1.1rem; font-weight: 700;">Root & Integrity Detection</h4>
-            <span id="secRootBadge" class="badge">DETECTED</span>
+            <h4 style="font-size: 1.1rem; font-weight: 700;">Root & Tamper Detection</h4>
+            <span id="auditRootBadge" class="badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171;">DETECTED</span>
           </div>
-          <ul id="secRootIndicators" style="margin-left: 1.25rem; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.7; margin-bottom: 1rem;">
-            <!-- Populated -->
-          </ul>
-          <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: var(--radius-md); padding: 0.75rem; font-size: 0.85rem; color: #fca5a5;">
-            <strong>Bypass Strategy:</strong> <span id="secRootBypass">...</span>
+          <ul id="auditRootList" style="margin-left: 1.25rem; color: var(--text-secondary); font-size: 0.88rem; line-height: 1.7; margin-bottom: 1rem;"></ul>
+          <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; padding: 0.75rem; font-size: 0.85rem; color: #fca5a5;">
+            <strong>Frida Bypass:</strong> <span id="auditRootBypass">Hook RootBeer methods to return false.</span>
           </div>
         </div>
 
         <!-- SSL Pinning Card -->
-        <div class="recipe-step-card">
+        <div style="background: var(--bg-node); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1.25rem;">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
             <h4 style="font-size: 1.1rem; font-weight: 700;">SSL / TLS Certificate Pinning</h4>
-            <span id="secSslBadge" class="badge">ENFORCED</span>
+            <span id="auditSslBadge" class="badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171;">ENFORCED</span>
           </div>
-          <ul id="secSslIndicators" style="margin-left: 1.25rem; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.7; margin-bottom: 1rem;">
-            <!-- Populated -->
-          </ul>
-          <div style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: var(--radius-md); padding: 0.75rem; font-size: 0.85rem; color: #a5b4fc;">
-            <strong>Bypass Strategy:</strong> <span id="secSslBypass">...</span>
+          <ul id="auditSslList" style="margin-left: 1.25rem; color: var(--text-secondary); font-size: 0.88rem; line-height: 1.7; margin-bottom: 1rem;"></ul>
+          <div style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 8px; padding: 0.75rem; font-size: 0.85rem; color: #a5b4fc;">
+            <strong>Frida Bypass:</strong> <span id="auditSslBypass">Hook CertificatePinner.check().</span>
           </div>
         </div>
       </div>
 
       <!-- Crypto Primitives -->
-      <div class="recipe-step-card">
-        <h4 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem;">Detected Cryptographic Primitives (DEX & JNI)</h4>
-        <div id="cryptoPrimitivesList">
-          <!-- Primitives -->
-        </div>
+      <div style="background: var(--bg-node); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1.25rem;">
+        <h4 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem;">Cryptographic Primitives Found in Bytecode & Native JNI</h4>
+        <div id="auditCryptoList"></div>
       </div>
-    </section>
+    </div>
+  </div>
 
-  </main>
+  <!-- Modal: Blueprint -->
+  <div id="modal-blueprint" class="full-modal">
+    <div class="modal-content-wrapper">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+        <div>
+          <h2 style="font-size: 1.5rem; font-weight: 700;">Reconstruction Blueprint</h2>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">Detailed architecture breakdown and step-by-step reproduction instructions.</p>
+        </div>
+        <button class="btn btn-secondary btn-close-modal">✕ Close</button>
+      </div>
 
-  <!-- Toast Notification -->
+      <div style="background: var(--bg-node); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+        <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--accent-cyan); margin-bottom: 0.5rem;">How It Works In Plain English</h3>
+        <p id="blueprintPlainEnglish" style="color: var(--text-secondary); line-height: 1.7; font-size: 0.92rem;"></p>
+      </div>
+
+      <div id="blueprintStepsList"></div>
+    </div>
+  </div>
+
+  <!-- Toast Notice -->
   <div id="toastNotice" class="toast-notice">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-    <span id="toastMessage">Copied to clipboard!</span>
+    <span id="toastMessage">Copied!</span>
   </div>
 
   <script src="app.js"></script>

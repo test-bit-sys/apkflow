@@ -1,14 +1,20 @@
 import path from 'node:path';
 import fs from 'node:fs';
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import { ApkParser } from './analyzer/apk-parser.js';
 import { DEMO_BANKING_APP } from './samples/demo-apps.js';
 
+// Support up to 2GB APK uploads using temporary disk buffer
+const tempUploadDir = path.resolve(process.cwd(), '.tmp_uploads');
+if (!fs.existsSync(tempUploadDir)) {
+  fs.mkdirSync(tempUploadDir, { recursive: true });
+}
+
 const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 300 * 1024 * 1024 }, // 300MB
+  dest: tempUploadDir,
+  limits: { fileSize: 2048 * 1024 * 1024 }, // 2GB
 });
 
 export function createApp() {
@@ -50,22 +56,56 @@ export function createApp() {
     res.status(404).json({ error: 'Analysis not found' });
   });
 
-  // Analyze uploaded APK
+  // Download generated sample APK
+  app.get('/api/download-sample-apk', (req: Request, res: Response) => {
+    const samplePath = path.resolve(process.cwd(), 'QuickPay-Sample.apk');
+    if (fs.existsSync(samplePath)) {
+      res.download(samplePath, 'QuickPay-Sample.apk');
+    } else {
+      res.status(404).json({ error: 'Sample APK not found' });
+    }
+  });
+
+  // Analyze uploaded APK (supports huge files up to 2GB)
   app.post('/api/analyze', upload.single('apk'), async (req: Request, res: Response) => {
+    let tempPath: string | null = null;
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No APK file uploaded.' });
       }
 
-      console.log(`[ApkFlow] Analyzing uploaded APK: ${req.file.originalname} (${(req.file.size / 1024 / 1024).toFixed(2)} MB)...`);
-      const result = await ApkParser.analyze(req.file.buffer, req.file.originalname);
+      tempPath = req.file.path;
+      const sizeMb = (req.file.size / 1024 / 1024).toFixed(1);
+      console.log(`[ApkFlow] Analyzing uploaded APK: ${req.file.originalname} (${sizeMb} MB)...`);
+
+      const fileBuffer = fs.readFileSync(tempPath);
+      const result = await ApkParser.analyze(fileBuffer, req.file.originalname);
       analysesCache.set(result.id, result);
+
       console.log(`[ApkFlow] Analysis complete for ${result.app.name} (${result.app.packageName}). Endpoints found: ${result.endpoints.length}`);
       res.json(result);
     } catch (err: any) {
       console.error('[ApkFlow] Analysis error:', err);
       res.status(500).json({ error: err.message || 'Failed to analyze APK.' });
+    } finally {
+      // Clean up temporary disk upload file
+      if (tempPath && fs.existsSync(tempPath)) {
+        try {
+          fs.unlinkSync(tempPath);
+        } catch {}
+      }
     }
+  });
+
+  // Multer Error Handling Middleware
+  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ error: 'APK is too large. Max supported size is 2GB.' });
+      }
+      return res.status(400).json({ error: `Upload error: ${err.message}` });
+    }
+    next(err);
   });
 
   // Serve static assets from public/ or client/dist
@@ -74,13 +114,13 @@ export function createApp() {
 
   if (fs.existsSync(publicDir)) {
     app.use(express.static(publicDir));
-    app.use((req: Request, res: Response, next) => {
+    app.use((req: Request, res: Response, next: NextFunction) => {
       if (req.path.startsWith('/api')) return next();
       res.sendFile(path.join(publicDir, 'index.html'));
     });
   } else if (fs.existsSync(clientDist)) {
     app.use(express.static(clientDist));
-    app.use((req: Request, res: Response, next) => {
+    app.use((req: Request, res: Response, next: NextFunction) => {
       if (req.path.startsWith('/api')) return next();
       res.sendFile(path.join(clientDist, 'index.html'));
     });
