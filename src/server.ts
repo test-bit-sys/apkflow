@@ -41,19 +41,14 @@ export function createApp() {
   const sourcesCache: Map<string, ExtractedSourceProject> = new Map();
   const rebuiltApksCache: Map<string, { filename: string; buffer: Buffer; size: number; sha256: string }> = new Map();
 
-  // Initialize Demo App
-  analysesCache.set(DEMO_BANKING_APP.id, DEMO_BANKING_APP);
-  const samplePath = path.resolve(process.cwd(), 'QuickPay-Sample.apk');
-  if (fs.existsSync(samplePath)) {
-    const sampleBuf = fs.readFileSync(samplePath);
-    apkBuffersCache.set(DEMO_BANKING_APP.id, sampleBuf);
-    try {
-      const demoSources = SourceExtractor.extract(sampleBuf, DEMO_BANKING_APP);
-      sourcesCache.set(DEMO_BANKING_APP.id, demoSources);
-    } catch (err) {
-      console.warn('[ApkFlow] Warning initializing demo sources:', err);
+  // Current active project lookup
+  app.get('/api/projects/latest', (req: Request, res: Response) => {
+    const all = Array.from(analysesCache.values());
+    if (all.length > 0) {
+      return res.json(all[all.length - 1]);
     }
-  }
+    res.status(404).json({ error: 'No active project uploaded yet.' });
+  });
 
   // API Routes
   app.get('/api/status', (req: Request, res: Response) => {
@@ -62,41 +57,15 @@ export function createApp() {
       version: '2.0.0',
       service: 'ApkFlow Advanced Reverse-Engineering & AI Modding Engine',
       features: ['visual-flow', 'source-decompiler', 'apk-rebuilder', 'ai-copilot-agent', 'pure-ts-signer'],
+      activeProjectsCount: analysesCache.size,
     });
   });
 
-  // Get available demo apps
-  app.get('/api/demos', (req: Request, res: Response) => {
-    res.json([
-      {
-        id: DEMO_BANKING_APP.id,
-        name: DEMO_BANKING_APP.app.name,
-        packageName: DEMO_BANKING_APP.app.packageName,
-        framework: DEMO_BANKING_APP.app.framework.displayName,
-        endpointsCount: DEMO_BANKING_APP.endpoints.length,
-        hasRootCheck: DEMO_BANKING_APP.security.rootDetection.found,
-        hasSslPinning: DEMO_BANKING_APP.security.sslPinning.found,
-      },
-    ]);
-  });
-
-  // Get demo by ID
-  app.get('/api/demos/:id', (req: Request, res: Response) => {
-    if (req.params.id === DEMO_BANKING_APP.id) {
-      return res.json(DEMO_BANKING_APP);
-    }
+  // Get analysis by ID
+  app.get('/api/analysis/:id', (req: Request, res: Response) => {
     const cached = analysesCache.get(req.params.id);
     if (cached) return res.json(cached);
     res.status(404).json({ error: 'Analysis not found' });
-  });
-
-  // Download generated sample APK
-  app.get('/api/download-sample-apk', (req: Request, res: Response) => {
-    if (fs.existsSync(samplePath)) {
-      res.download(samplePath, 'QuickPay-Sample.apk');
-    } else {
-      res.status(404).json({ error: 'Sample APK not found' });
-    }
   });
 
   // Analyze uploaded APK (supports huge files up to 2GB)
@@ -139,6 +108,15 @@ export function createApp() {
         } catch {}
       }
     }
+  });
+
+  // Get cached analysis by ID
+  app.get('/api/analysis/:id', (req: Request, res: Response) => {
+    const analysis = analysesCache.get(req.params.id);
+    if (!analysis) {
+      return res.status(404).json({ error: 'Analysis not found' });
+    }
+    res.json(analysis);
   });
 
   // 1. Source Code Explorer Routes

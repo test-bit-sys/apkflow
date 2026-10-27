@@ -14,8 +14,22 @@ import { AdbBridge } from './src/analyzer/adb-bridge.js';
 
 async function testAll() {
   console.log('🧪 Starting ApkFlow v2.0 Extended Feature Tests...');
-  const apkBuf = fs.readFileSync('QuickPay-Sample.apk');
-  const analysis = await ApkParser.analyze(apkBuf, 'QuickPay-Sample.apk');
+  let apkBuf: Buffer;
+  let filename = 'BaridiMob_1.29.1_apkcube.apks';
+  const realUserApks = 'C:\\Users\\safou\\Downloads\\BaridiMob_1.29.1_apkcube.apks';
+  if (fs.existsSync(realUserApks)) {
+    apkBuf = fs.readFileSync(realUserApks);
+    console.log(`📦 Using user file: ${realUserApks} (${(apkBuf.length / 1024 / 1024).toFixed(2)} MB)`);
+  } else {
+    // In-memory synthetic APK bundle
+    const AdmZip = (await import('adm-zip')).default;
+    const zip = new AdmZip();
+    zip.addFile('AndroidManifest.xml', Buffer.from('<manifest package="com.app.test"><application android:name=".App"/></manifest>'));
+    zip.addFile('classes.dex', Buffer.from('dex\n035\0test-bytecode-stream'));
+    apkBuf = zip.toBuffer();
+    filename = 'SyntheticApp.apk';
+  }
+  const analysis = await ApkParser.analyze(apkBuf, filename);
   console.log(`✅ Analyzed ${analysis.app.name}`);
 
   // 1. Source Extractor

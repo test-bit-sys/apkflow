@@ -3,1063 +3,653 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ApkFlow — Visual Mobile App Reverse Engineering & Reconstruction</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236366f1'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>">
+  <title>ApkFlow — Mobile App Reverse Engineering & Reconstruction Platform</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236366f1'><polygon points='12 2 2 7 12 12 22 7 12 2'/><polyline points='2 17 12 22 22 17'/><polyline points='2 12 12 17 22 12'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=2.1">
 </head>
-<body>
+<body class="theme-dark">
 
-  <!-- 1. Top Navbar (n8n Style) -->
-  <header class="n8n-header">
-    <div class="brand-section">
-      <div class="brand-icon-box">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-      </div>
-      <div>
-        <span class="brand-name">ApkFlow</span>
+  <!-- 1. Top Enterprise App Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="brand-badge">
+        <div class="brand-logo-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+        </div>
+        <span class="brand-title">ApkFlow</span>
+        <span class="version-tag">v2.0</span>
       </div>
 
-      <div class="app-meta-badge">
-        <span style="color: var(--text-muted);">Target:</span>
-        <strong id="headerAppName" style="color: #fff;">Loading...</strong>
-        <span style="color: var(--border-node);">•</span>
-        <code id="headerAppPkg" style="color: var(--accent-cyan); font-family: var(--font-mono); font-size: 0.75rem;">...</code>
-        <span style="color: var(--border-node);">•</span>
-        <span id="headerAppFramework" class="badge" style="background: rgba(99, 102, 241, 0.2); color: #818cf8; font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 4px;">...</span>
+      <!-- Active Project Info Bar (visible when an app is analyzed) -->
+      <div id="projectInfoBar" class="project-info-bar" style="display: none;">
+        <span class="status-indicator-dot online"></span>
+        <strong id="headerAppName" class="project-name">Loading...</strong>
+        <span class="meta-separator">•</span>
+        <code id="headerAppPkg" class="project-pkg">com.package</code>
+        <span class="meta-separator">•</span>
+        <span id="headerAppVersion" class="meta-pill">v1.0</span>
+        <span class="meta-separator">•</span>
+        <span id="headerAppFramework" class="badge-framework">Android</span>
       </div>
     </div>
 
-    <!-- Canvas Navigation Controls -->
-    <div class="canvas-controls">
-      <button id="btnZoomOut" class="control-btn" title="Zoom Out (Ctrl -)">−</button>
-      <button id="btnResetView" class="control-btn" title="Reset Canvas View" style="font-size: 0.75rem;">100%</button>
-      <button id="btnZoomIn" class="control-btn" title="Zoom In (Ctrl +)">+</button>
-    </div>
-
-    <!-- Header Quick Actions -->
-    <div class="header-actions">
-      <!-- Download Sample APK Button -->
-      <a href="/api/download-sample-apk" download="QuickPay-Sample.apk" class="btn btn-secondary" title="Download the generated test APK to test uploading" style="text-decoration: none;">
+    <!-- Center Navigation Tabs (Tabs switch views in-place smoothly) -->
+    <nav id="mainNavTabs" class="main-nav-tabs" style="display: none;">
+      <button class="nav-tab active" data-tab="view-canvas">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        <span>Flow Canvas</span>
+      </button>
+      <button class="nav-tab" data-tab="view-sources">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline><line x1="12" y1="2" x2="12" y2="6"></line></svg>
+        <span>Source Tree</span>
+      </button>
+      <button class="nav-tab" data-tab="view-audit">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        <span>OWASP SAST</span>
+      </button>
+      <button class="nav-tab" data-tab="view-secrets">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-1.5 1.5L14 9l-3 3-2-2-5 5 2 2 3-3 2 2 4.5-4.5"></path><circle cx="7.5" cy="15.5" r="5.5"></circle></svg>
+        <span>Secret Vault</span>
+      </button>
+      <button class="nav-tab" data-tab="view-elf">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M7 8h10M7 12h10M7 16h10"></path></svg>
+        <span>Native (.so)</span>
+      </button>
+      <button class="nav-tab" data-tab="view-intent">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+        <span>Deep Links</span>
+      </button>
+      <button class="nav-tab" data-tab="view-rebuild">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        <span>Rebuilder</span>
+      </button>
+      <button class="nav-tab" data-tab="view-frida">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m13 2-2 2.5h3L11 8"></path><circle cx="12" cy="14" r="8"></circle></svg>
+        <span>Frida Hooks</span>
+      </button>
+      <button class="nav-tab" data-tab="view-sandbox">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="m9 8 6 4-6 4Z"></path></svg>
+        <span>API Sandbox</span>
+      </button>
+      <button class="nav-tab" data-tab="view-adb">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+        <span>ADB Bridge</span>
+      </button>
+      <button class="nav-tab" data-tab="view-agent">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8V4H8"></path><rect width="16" height="12" x="4" y="8" rx="2"></rect><path d="M2 14h2"></path><path d="M20 14h2"></path><path d="M15 13v2"></path><path d="M9 13v2"></path></svg>
+        <span>AI Copilot</span>
+      </button>
+      <button class="nav-tab" data-tab="view-export">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-        Download Test APK
-      </a>
-
-      <!-- Quick Demo Switcher -->
-      <button id="btnQuickPayDemo" class="btn btn-secondary">
-        ⚡ QuickPay Demo
+        <span>Export</span>
       </button>
-      <button id="btnBaridiDemo" class="btn btn-secondary">
-        ⚡ BaridiMob Demo
-      </button>
+    </nav>
 
-      <!-- Upload APK Button -->
-      <label for="apkFileInput" class="btn btn-primary" style="cursor: pointer;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-        Upload APK / APKS
+    <!-- Header Right (Upload Button) -->
+    <div class="header-right">
+      <label for="apkFileInput" class="btn-upload-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+        <span>Upload APK / APKS</span>
       </label>
       <input type="file" id="apkFileInput" accept=".apk,.apks,.xapk,.apkm,.zip" style="display: none;">
     </div>
   </header>
 
-  <!-- 2. Central Infinite Canvas (n8n Workspace) -->
-  <main id="canvasContainer" class="canvas-container">
-    <div id="canvasWorld" class="canvas-world">
-      <!-- SVG dynamic bezier connecting cables -->
-      <svg id="connectionsSvg" class="connections-svg"></svg>
+  <!-- 2. Main Content Area -->
+  <div class="app-body">
 
-      <!-- Nodes rendered dynamically here -->
-      <div id="nodesLayer"></div>
-    </div>
-  </main>
-
-  <!-- 3. Slide-out Inspector Drawer (n8n Node Settings) -->
-  <aside id="inspectorDrawer" class="inspector-drawer">
-    <div class="drawer-header">
-      <div style="display: flex; align-items: center; gap: 0.75rem;">
-        <div id="drawerIcon" class="brand-icon-box" style="width: 32px; height: 32px;"></div>
-        <div>
-          <h3 id="drawerTitle" style="font-size: 1.1rem; font-weight: 700;">Node Title</h3>
-          <p id="drawerSubtitle" style="font-size: 0.78rem; color: var(--text-muted); font-family: var(--font-mono);">Subtitle</p>
+    <!-- A. Empty State / Hero Dropzone (Displayed when no app is uploaded yet) -->
+    <section id="emptyStateView" class="empty-state-container">
+      <div class="hero-dropzone-card" id="dropzoneCard">
+        <div class="dropzone-glow"></div>
+        <div class="dropzone-icon-box">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.75"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
         </div>
-      </div>
-      <button id="btnCloseDrawer" class="btn btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.9rem;">✕</button>
-    </div>
+        <h2 class="hero-title">Drop your Android Application here</h2>
+        <p class="hero-subtitle">
+          Instantly reverse-engineer, decompile Java & Smali, inspect native libraries, audit OWASP vulnerabilities, and rebuild signed APKs with 1 click.
+        </p>
 
-    <!-- Drawer Tabs -->
-    <div class="drawer-tabs">
-      <button class="drawer-tab-btn active" data-drawer-tab="dtab-overview">Overview</button>
-      <button class="drawer-tab-btn" data-drawer-tab="dtab-endpoints">APIs & Schema</button>
-      <button class="drawer-tab-btn" data-drawer-tab="dtab-code">Step Code</button>
-      <button class="drawer-tab-btn" data-drawer-tab="dtab-security">Bypass & Hook</button>
-    </div>
-
-    <!-- Drawer Body -->
-    <div class="drawer-body">
-      <!-- Tab 1: Overview -->
-      <div id="dtab-overview" class="drawer-pane">
-        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem;">
-          <h4 style="font-size: 0.88rem; font-weight: 600; color: var(--accent-cyan); margin-bottom: 0.35rem;">Component Lifecycle & Role</h4>
-          <p id="drawerDescription" style="color: var(--text-secondary); font-size: 0.88rem; line-height: 1.6;">Description</p>
+        <div class="supported-formats-bar">
+          <span class="format-pill">.APK (Standalone)</span>
+          <span class="format-pill highlight">.APKS (Split Bundles)</span>
+          <span class="format-pill">.XAPK (APKPure)</span>
+          <span class="format-pill">.APKM (APKMirror)</span>
+          <span class="format-pill">.ZIP</span>
         </div>
 
-        <div id="drawerMetrics" style="display: flex; flex-direction: column; gap: 0.75rem;">
-          <!-- Key-value metrics -->
+        <label for="apkFileInput" class="btn-hero-cta">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          Select File from Computer
+        </label>
+
+        <div id="uploadProgressBox" class="upload-progress-box" style="display: none;">
+          <div class="spinner-ring"></div>
+          <span id="uploadProgressText" style="font-size: 0.9rem; color: #fff; font-weight: 600;">Analyzing Application...</span>
         </div>
       </div>
 
-      <!-- Tab 2: Endpoints -->
-      <div id="dtab-endpoints" class="drawer-pane" style="display: none;">
-        <div id="drawerEndpointContent">
-          <!-- Populated -->
+      <!-- Feature Highlights -->
+      <div class="hero-features-grid">
+        <div class="hero-feature-card">
+          <div class="hf-icon">🗺️</div>
+          <h4>Visual Architecture</h4>
+          <p>Maps app lifecycle, entry points, auth flows, and API gateways into an interactive inspectable flowchart.</p>
+        </div>
+        <div class="hero-feature-card">
+          <div class="hf-icon">📂</div>
+          <h4>Complete Decompiler</h4>
+          <p>Browse AndroidManifest.xml, decompiled Java classes, Smali assembly, and resources with an in-memory editor.</p>
+        </div>
+        <div class="hero-feature-card">
+          <div class="hf-icon">🛡️</div>
+          <h4>OWASP SAST & Secrets</h4>
+          <p>Automated static security audit with CVSS letter grade and deep scanner for hardcoded cloud credentials.</p>
+        </div>
+        <div class="hero-feature-card">
+          <div class="hf-icon">🛠️</div>
+          <h4>1-Click Rebuilder & Signer</h4>
+          <p>Bypass root and SSL pinning with one click and sign the modded APK with pure TypeScript (zero Java needed).</p>
         </div>
       </div>
+    </section>
 
-      <!-- Tab 3: Step Code -->
-      <div id="dtab-code" class="drawer-pane" style="display: none;">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-          <span style="font-size: 0.82rem; color: var(--text-muted);">Runnable snippet for this step:</span>
-          <button id="btnCopyStepCode" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">Copy Code</button>
-        </div>
-        <div class="code-box">
-          <div class="code-header-bar">
-            <span>TypeScript / Node.js</span>
+    <!-- B. Active Workspace Container (Visible once an app is analyzed) -->
+    <main id="activeWorkspaceView" class="active-workspace-container" style="display: none;">
+
+      <!-- View 1: Flow Canvas (Visual Architecture) -->
+      <div id="view-canvas" class="workspace-pane active">
+        <div class="canvas-viewport" id="canvasContainer">
+          <div class="canvas-controls-overlay">
+            <button id="btnZoomOut" class="control-btn" title="Zoom Out">−</button>
+            <button id="btnResetView" class="control-btn" title="Reset View">100%</button>
+            <button id="btnZoomIn" class="control-btn" title="Zoom In">+</button>
           </div>
-          <pre class="code-pre-area"><code id="drawerStepCode">// Code</code></pre>
-        </div>
-      </div>
-
-      <!-- Tab 4: Security & Bypass -->
-      <div id="dtab-security" class="drawer-pane" style="display: none;">
-        <div id="drawerSecurityContent">
-          <!-- Populated with Frida scripts -->
-        </div>
-      </div>
-    </div>
-  </aside>
-
-  <!-- 4. Bottom Floating Dock (n8n Tool Switcher) -->
-  <nav class="floating-dock">
-    <button class="dock-btn active" data-view="canvas">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-      Workflow Canvas
-    </button>
-    <button class="dock-btn" data-view="modal-sources" id="dockBtnSources" style="border: 1px solid rgba(6, 182, 212, 0.3);">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline><line x1="12" y1="2" x2="12" y2="6"></line></svg>
-      Source Explorer
-    </button>
-    <button class="dock-btn" data-view="modal-rebuild" id="dockBtnRebuild" style="border: 1px solid rgba(99, 102, 241, 0.4);">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-      Rebuilder & Studio
-    </button>
-    <button class="dock-btn" data-view="modal-agent" id="dockBtnAgent" style="border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399;">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8V4H8"></path><rect width="16" height="12" x="4" y="8" rx="2"></rect><path d="M2 14h2"></path><path d="M20 14h2"></path><path d="M15 13v2"></path><path d="M9 13v2"></path></svg>
-      AI Copilot
-    </button>
-    <button class="dock-btn" data-view="modal-frida" id="dockBtnFrida" style="border: 1px solid rgba(245, 158, 11, 0.4); color: #fbbf24;">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m13 2-2 2.5h3L11 8"></path><circle cx="12" cy="14" r="8"></circle></svg>
-      Frida Studio
-    </button>
-    <button class="dock-btn" data-view="modal-sandbox" id="dockBtnSandbox">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="m9 8 6 4-6 4Z"></path></svg>
-      API Sandbox
-    </button>
-    <button class="dock-btn" data-view="modal-audit" id="dockBtnAudit">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-      OWASP SAST
-    </button>
-    <button class="dock-btn" data-view="modal-export" id="dockBtnExport">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-      Export Hub
-    </button>
-    <button class="dock-btn" data-view="modal-secrets" id="dockBtnSecrets" style="border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171;">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-1.5 1.5L14 9l-3 3-2-2-5 5 2 2 3-3 2 2 4.5-4.5"></path><circle cx="7.5" cy="15.5" r="5.5"></circle></svg>
-      Secret Vault
-    </button>
-    <button class="dock-btn" data-view="modal-elf" id="dockBtnElf" style="border: 1px solid rgba(168, 85, 247, 0.4); color: #c084fc;">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M7 8h10M7 12h10M7 16h10"></path></svg>
-      Native & ELF
-    </button>
-    <button class="dock-btn" data-view="modal-intent" id="dockBtnIntent" style="border: 1px solid rgba(234, 179, 8, 0.4); color: #facc15;">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-      Deep Links
-    </button>
-    <button class="dock-btn" data-view="modal-adb" id="dockBtnAdb" style="border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399;">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
-      ADB Bridge
-    </button>
-    <button class="dock-btn" data-view="modal-code">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-      SDK Generator
-    </button>
-  </nav>
-
-  <!-- 5. Fullscreen Overlay Modals -->
-
-  <!-- Modal: Source Code Explorer -->
-  <div id="modal-sources" class="full-modal">
-    <div class="modal-content-wrapper" style="max-width: 1400px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
-        <div>
-          <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <h2 style="font-size: 1.5rem; font-weight: 700;">Decompiled Source Code Explorer</h2>
-            <span class="badge" style="background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 9999px;">
-              <span id="sourcesTotalFilesBadge">0 Files</span>
-            </span>
-          </div>
-          <p style="color: var(--text-secondary); font-size: 0.88rem;">Interactive decompiler and code inspector. Inspect AndroidManifest.xml, Java pseudo-code, Smali assembly, and resources.</p>
-        </div>
-        <button class="btn btn-secondary btn-close-modal">✕ Close</button>
-      </div>
-
-      <div class="sources-layout">
-        <!-- Left: File Tree -->
-        <div class="sources-sidebar">
-          <div class="sources-sidebar-header">
-            <input type="text" id="sourceFileSearch" class="sources-search-box" placeholder="Filter files (e.g. Manifest, Security, Api)...">
-          </div>
-          <div id="sourcesTreeContainer" class="sources-tree-list">
-            <!-- Populated dynamically -->
+          <div id="canvasWorld" class="canvas-world">
+            <svg id="connectionsSvg" class="connections-svg"></svg>
+            <div id="nodesLayer"></div>
           </div>
         </div>
 
-        <!-- Right: Code Viewer & Editor -->
-        <div class="sources-editor-wrapper">
-          <div class="sources-editor-topbar">
+        <!-- Slide-out Node Inspector Drawer -->
+        <aside id="inspectorDrawer" class="inspector-drawer">
+          <div class="drawer-header">
             <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <span id="currentFilePath" style="font-family: var(--font-mono); font-size: 0.85rem; color: #fff; font-weight: 600;">AndroidManifest.xml</span>
-              <span id="currentFileLang" class="badge" style="background: rgba(99, 102, 241, 0.2); color: #818cf8; font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 4px;">XML</span>
+              <div id="drawerIcon" class="drawer-icon-box"></div>
+              <div>
+                <h3 id="drawerTitle" style="font-size: 1.05rem; font-weight: 700;">Node Title</h3>
+                <p id="drawerSubtitle" style="font-size: 0.78rem; color: var(--text-muted); font-family: var(--font-mono);">Subtitle</p>
+              </div>
             </div>
-            <div style="display: flex; gap: 0.5rem;">
-              <button id="btnCopyCurrentFile" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.3rem 0.7rem;">Copy File</button>
-              <button id="btnSaveCurrentFile" class="btn btn-primary" style="font-size: 0.75rem; padding: 0.3rem 0.7rem;">Save & Stage Changes</button>
+            <button id="btnCloseDrawer" class="btn-icon-close">✕</button>
+          </div>
+          <div class="drawer-tabs">
+            <button class="drawer-tab-btn active" data-drawer-tab="dtab-overview">Overview</button>
+            <button class="drawer-tab-btn" data-drawer-tab="dtab-endpoints">APIs & Schema</button>
+            <button class="drawer-tab-btn" data-drawer-tab="dtab-code">Code</button>
+            <button class="drawer-tab-btn" data-drawer-tab="dtab-security">Bypass</button>
+          </div>
+          <div class="drawer-body">
+            <div id="dtab-overview" class="drawer-pane" style="display: block;">
+              <p id="drawerDescription" style="color: var(--text-secondary); font-size: 0.88rem; line-height: 1.6; margin-bottom: 1rem;"></p>
+              <div id="drawerMetrics" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+            </div>
+            <div id="dtab-endpoints" class="drawer-pane" style="display: none;">
+              <div id="drawerEndpointContent"></div>
+            </div>
+            <div id="dtab-code" class="drawer-pane" style="display: none;">
+              <div style="display: flex; justify-content: flex-end; margin-bottom: 0.5rem;">
+                <button id="btnCopyStepCode" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">Copy Code</button>
+              </div>
+              <pre class="code-pre-area"><code id="drawerStepCode">// Code</code></pre>
+            </div>
+            <div id="dtab-security" class="drawer-pane" style="display: none;">
+              <div id="drawerSecurityContent"></div>
             </div>
           </div>
-          <textarea id="sourceCodeDisplay" class="sources-editor-textarea" spellcheck="false" placeholder="Select a file from the explorer on the left..."></textarea>
-          <div class="sources-editor-statusbar">
-            <span id="editorStatusInfo">Lines: 0 • Size: 0 KB</span>
-            <span style="color: var(--accent-emerald);">● Synchronized in Memory</span>
+        </aside>
+      </div>
+
+      <!-- View 2: Decompiled Source Tree & Editor -->
+      <div id="view-sources" class="workspace-pane">
+        <div class="sources-workspace-layout">
+          <div class="sources-sidebar">
+            <div class="sources-sidebar-header">
+              <input type="text" id="sourceFileSearch" class="search-input" placeholder="Search files (e.g. Manifest, Crypto, Api)...">
+              <span id="sourcesTotalFilesBadge" class="sources-count-badge">0 Files</span>
+            </div>
+            <div id="sourcesTreeContainer" class="sources-tree-list"></div>
+          </div>
+          <div class="sources-editor-panel">
+            <div class="editor-header-bar">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span id="currentFilePath" class="active-file-title">AndroidManifest.xml</span>
+                <span id="currentFileLang" class="badge-tag">XML</span>
+              </div>
+              <div style="display: flex; gap: 0.5rem;">
+                <button id="btnCopyCurrentFile" class="btn btn-secondary" style="font-size: 0.78rem;">Copy Content</button>
+                <button id="btnSaveCurrentFile" class="btn btn-primary" style="font-size: 0.78rem;">Save & Stage Changes</button>
+              </div>
+            </div>
+            <textarea id="sourceCodeDisplay" class="source-code-editor" spellcheck="false" placeholder="Select a file to inspect..."></textarea>
+            <div class="editor-status-bar">
+              <span id="editorStatusInfo">Lines: 0 • Size: 0 KB</span>
+              <span style="color: #34d399;">● Synchronized in Memory</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Modal: Mod & Rebuild Studio -->
-  <div id="modal-rebuild" class="full-modal">
-    <div class="modal-content-wrapper" style="max-width: 1300px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
-        <div>
-          <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <h2 style="font-size: 1.5rem; font-weight: 700;">ApkFlow Mod & Rebuild Studio</h2>
-            <span class="badge" style="background: rgba(99, 102, 241, 0.2); color: #818cf8; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 9999px;">
-              RSA-2048 Native Signer
-            </span>
+      <!-- View 3: OWASP Mobile Top 10 SAST Audit -->
+      <div id="view-audit" class="workspace-pane">
+        <div class="pane-content-wrapper">
+          <div class="pane-header-row">
+            <div>
+              <h2 class="pane-title">OWASP Mobile Top 10 Security Audit</h2>
+              <p class="pane-subtitle">Automated static analysis covering credentials, cleartext traffic, cryptography, debuggable flags, and exported components.</p>
+            </div>
           </div>
-          <p style="color: var(--text-secondary); font-size: 0.88rem;">Automate security bypasses, redirect network traffic, repack bytecode, and sign with standard Android Debug Keystore.</p>
+          <div class="audit-summary-grid">
+            <div class="audit-score-card">
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Security Grade</div>
+              <div id="auditGradeCircle" class="score-circle-grade">B</div>
+              <div id="auditScorePoints" style="font-size: 1.1rem; font-weight: 700; color: #fff; margin-top: 0.25rem;">Score: 78/100</div>
+              <span id="auditRiskBadge" class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; margin-top: 0.4rem;">ELEVATED RISK</span>
+            </div>
+            <div class="audit-metrics-col">
+              <div class="metric-mini-card critical">
+                <span class="m-label">Critical</span>
+                <span id="auditCountCritical" class="m-val">0</span>
+              </div>
+              <div class="metric-mini-card high">
+                <span class="m-label">High</span>
+                <span id="auditCountHigh" class="m-val">1</span>
+              </div>
+              <div class="metric-mini-card medium">
+                <span class="m-label">Medium</span>
+                <span id="auditCountMedium" class="m-val">2</span>
+              </div>
+              <div class="metric-mini-card low">
+                <span class="m-label">Low</span>
+                <span id="auditCountLow" class="m-val">1</span>
+              </div>
+            </div>
+          </div>
+          <div id="auditVulnsList" class="cards-list-container"></div>
         </div>
-        <button class="btn btn-secondary btn-close-modal">✕ Close</button>
       </div>
 
-      <div class="rebuild-layout">
-        <!-- Left: 1-Click Patch Configuration -->
-        <div>
-          <h3 style="font-size: 1.1rem; font-weight: 700; color: #fff; margin-bottom: 1rem;">1-Click Security Bypasses & Modifications</h3>
-
-          <div class="patch-card">
-            <div class="patch-header">
-              <input type="checkbox" id="patchRoot" class="patch-checkbox" checked>
-              <div>
-                <label for="patchRoot" style="font-weight: 600; font-size: 0.95rem; cursor: pointer; color: #fff;">Bypass Root & Tamper Detection</label>
-                <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.25rem;">Neutralizes RootBeer checks, patches /system/bin/su markers, and replaces test-keys tags in DEX bytecode.</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="patch-card">
-            <div class="patch-header">
-              <input type="checkbox" id="patchSsl" class="patch-checkbox" checked>
-              <div>
-                <label for="patchSsl" style="font-weight: 600; font-size: 0.95rem; cursor: pointer; color: #fff;">Bypass SSL / TLS Certificate Pinning</label>
-                <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.25rem;">Injects permissive network_security_config.xml trusting user CA certificates, and neutralizes OkHttp SPKI pin hashes.</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="patch-card">
-            <div class="patch-header">
-              <input type="checkbox" id="patchDebug" class="patch-checkbox" checked>
-              <div>
-                <label for="patchDebug" style="font-weight: 600; font-size: 0.95rem; cursor: pointer; color: #fff;">Make Application Debuggable</label>
-                <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.25rem;">Enables android:debuggable="true" in AndroidManifest.xml for seamless Android Studio, LLDB, and GDB debugger attachment.</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="patch-card">
-            <div class="patch-header">
-              <input type="checkbox" id="patchRedirect" class="patch-checkbox">
-              <div style="flex: 1;">
-                <label for="patchRedirect" style="font-weight: 600; font-size: 0.95rem; cursor: pointer; color: #fff;">API Server Redirector</label>
-                <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.25rem; margin-bottom: 0.5rem;">Redirect backend API calls to your local proxy, mock server, or Burp Suite instance.</p>
-                <input type="text" id="inputRedirectUrl" placeholder="http://10.0.2.2:8080 or http://localhost:3000" style="width: 100%; background: #090d16; border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.45rem 0.75rem; color: #fff; font-size: 0.82rem; font-family: var(--font-mono);">
-              </div>
-            </div>
-          </div>
-
-          <div class="patch-card">
-            <div class="patch-header">
-              <input type="checkbox" id="patchTelemetry" class="patch-checkbox">
-              <div>
-                <label for="patchTelemetry" style="font-weight: 600; font-size: 0.95rem; cursor: pointer; color: #fff;">Strip Analytics & Telemetry Trackers</label>
-                <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.25rem;">Redirects Firebase Analytics, Google Measurement, and crash trackers to local sinkholes.</p>
-              </div>
-            </div>
-          </div>
-
-          <button id="btnTriggerRebuild" class="btn btn-primary" style="width: 100%; padding: 0.85rem; font-size: 0.95rem; justify-content: center; margin-top: 0.5rem;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-            Rebuild & Sign APK Now
-          </button>
-        </div>
-
-        <!-- Right: Terminal & Artifact Box -->
-        <div>
-          <h3 style="font-size: 1.1rem; font-weight: 700; color: #fff; margin-bottom: 1rem;">Build & Signing Console</h3>
-
-          <div class="terminal-box">
-            <div class="terminal-header">
-              <span class="term-dot term-red"></span>
-              <span class="term-dot term-yellow"></span>
-              <span class="term-dot term-green"></span>
-              <span style="margin-left: 0.5rem;">APKFLOW REBUILD & SIGNER ENGINE v2.0</span>
-            </div>
-            <div id="rebuildLogs" class="terminal-body">
-              <div class="term-line" style="color: var(--text-muted);">[Ready] Select your desired security patches and click "Rebuild & Sign APK Now".</div>
-            </div>
-          </div>
-
-          <div id="rebuildOutputCard" class="rebuild-success-banner" style="display: none;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+      <!-- View 4: Sensitive Data & Secret Vault Hunter -->
+      <div id="view-secrets" class="workspace-pane">
+        <div class="pane-content-wrapper">
+          <div class="pane-header-row">
+            <div>
               <div style="display: flex; align-items: center; gap: 0.6rem;">
-                <span style="font-size: 1.5rem;">🎉</span>
+                <h2 class="pane-title">Sensitive Data & Secret Vault Hunter</h2>
+                <span id="secretOverallBadge" class="badge-tag" style="background: rgba(239, 68, 68, 0.2); color: #f87171;">0 Detected</span>
+              </div>
+              <p class="pane-subtitle">Detects hardcoded AWS keys, Google API keys, Stripe tokens, private certificates, and high-entropy secrets across code and resources.</p>
+            </div>
+            <button id="btnAiRedactAllSecrets" class="btn btn-primary" style="font-size: 0.85rem;">
+              🤖 1-Click Redact with AI Agent
+            </button>
+          </div>
+          <div class="stats-row-4">
+            <div class="stat-box"><span class="sb-label">Total Secrets</span><strong id="secretTotalCount" class="sb-num">0</strong></div>
+            <div class="stat-box red"><span class="sb-label">Critical</span><strong id="secretCriticalCount" class="sb-num">0</strong></div>
+            <div class="stat-box yellow"><span class="sb-label">High Severity</span><strong id="secretHighCount" class="sb-num">0</strong></div>
+            <div class="stat-box green"><span class="sb-label">Overall Risk</span><strong id="secretRiskLevel" class="sb-num">LOW</strong></div>
+          </div>
+          <div style="margin-bottom: 1rem;">
+            <input type="text" id="secretSearchInput" class="search-input" placeholder="Filter secrets by title, type, or file path...">
+          </div>
+          <div id="secretListContainer" class="cards-list-container"></div>
+        </div>
+      </div>
+
+      <!-- View 5: Native Binary & ELF Inspector -->
+      <div id="view-elf" class="workspace-pane">
+        <div class="pane-content-wrapper">
+          <div class="pane-header-row">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <h2 class="pane-title">Native Binary & ELF / JNI Inspector</h2>
+                <span id="elfTotalLibsBadge" class="badge-tag" style="background: rgba(168, 85, 247, 0.2); color: #c084fc;">Shared Objects (.so)</span>
+              </div>
+              <p class="pane-subtitle">Dissects compiled C/C++ native shared objects (.so). Analyzes ELF headers, exported JNI bridges, stack canaries, and strings.</p>
+            </div>
+          </div>
+          <div id="elfContentContainer" class="cards-list-container"></div>
+        </div>
+      </div>
+
+      <!-- View 6: Deep Link & Intent-Filter Matrix -->
+      <div id="view-intent" class="workspace-pane">
+        <div class="pane-content-wrapper">
+          <div class="pane-header-row">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <h2 class="pane-title">Deep Link & Intent-Filter Security Matrix</h2>
+                <span id="intentTotalBadge" class="badge-tag" style="background: rgba(234, 179, 8, 0.2); color: #facc15;">Active Schemes</span>
+              </div>
+              <p class="pane-subtitle">Audits custom URI schemes (e.g. quickpay://) vs verified Android App Links. Identifies scheme hijacking risks and open intent redirects.</p>
+            </div>
+          </div>
+          <div class="stats-row-4">
+            <div class="stat-box"><span class="sb-label">Total Deep Links</span><strong id="intentTotalCount" class="sb-num">0</strong></div>
+            <div class="stat-box red"><span class="sb-label">Custom Schemes</span><strong id="intentCustomCount" class="sb-num">0</strong></div>
+            <div class="stat-box green"><span class="sb-label">App Links (HTTPS)</span><strong id="intentAppLinksCount" class="sb-num">0</strong></div>
+            <div class="stat-box yellow"><span class="sb-label">Unverified Domains</span><strong id="intentUnverifiedCount" class="sb-num">0</strong></div>
+          </div>
+          <div id="intentListContainer" class="cards-list-container"></div>
+        </div>
+      </div>
+
+      <!-- View 7: APK Rebuilder Studio -->
+      <div id="view-rebuild" class="workspace-pane">
+        <div class="pane-content-wrapper">
+          <div class="pane-header-row">
+            <div>
+              <h2 class="pane-title">APK Modding & 1-Click Rebuilder Studio</h2>
+              <p class="pane-subtitle">Apply security bypasses, patch bytecode, and re-sign with pure TypeScript (zero Java runtime dependency).</p>
+            </div>
+          </div>
+          <div class="rebuilder-grid-layout">
+            <div class="patches-col">
+              <h3 class="section-title">Security Patch Toggles</h3>
+              <div class="patch-card">
+                <input type="checkbox" id="patchRoot" class="patch-checkbox" checked>
                 <div>
-                  <h4 style="font-size: 1.05rem; font-weight: 700; color: #fff;" id="rebuildSuccessTitle">Modded APK Ready</h4>
-                  <p id="rebuildMetaInfo" style="font-size: 0.8rem; color: var(--text-secondary); font-family: var(--font-mono);">Size: 0 MB • Signed with Android Debug Keystore</p>
+                  <label for="patchRoot" class="patch-title">Bypass Root & Tamper Detection</label>
+                  <p class="patch-desc">Neutralizes RootBeer checks, patches /system/bin/su markers, and replaces test-keys tags in DEX bytecode.</p>
                 </div>
               </div>
-              <a id="btnDownloadRebuiltApk" href="#" class="btn btn-primary" download style="text-decoration: none;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                Download Modded APK
-              </a>
+              <div class="patch-card">
+                <input type="checkbox" id="patchSsl" class="patch-checkbox" checked>
+                <div>
+                  <label for="patchSsl" class="patch-title">Bypass SSL / TLS Certificate Pinning</label>
+                  <p class="patch-desc">Injects permissive network_security_config.xml trusting user CA certificates and neutralizes OkHttp SPKI pin hashes.</p>
+                </div>
+              </div>
+              <div class="patch-card">
+                <input type="checkbox" id="patchDebug" class="patch-checkbox" checked>
+                <div>
+                  <label for="patchDebug" class="patch-title">Make Application Debuggable</label>
+                  <p class="patch-desc">Enables android:debuggable="true" in AndroidManifest.xml for seamless debugger attachment.</p>
+                </div>
+              </div>
+              <div class="patch-card">
+                <input type="checkbox" id="patchRedirect" class="patch-checkbox">
+                <div style="flex: 1;">
+                  <label for="patchRedirect" class="patch-title">API Server Redirector</label>
+                  <p class="patch-desc">Redirect backend API calls to your local proxy, mock server, or Burp Suite instance.</p>
+                  <input type="text" id="inputRedirectUrl" placeholder="http://10.0.2.2:8080 or http://localhost:3000" class="input-text-code">
+                </div>
+              </div>
+              <div class="patch-card">
+                <input type="checkbox" id="patchTelemetry" class="patch-checkbox">
+                <div>
+                  <label for="patchTelemetry" class="patch-title">Strip Analytics & Telemetry</label>
+                  <p class="patch-desc">Redirects Firebase Analytics, Google Measurement, and crash trackers to local sinkholes.</p>
+                </div>
+              </div>
+              <button id="btnTriggerRebuild" class="btn btn-primary" style="width: 100%; padding: 0.9rem; font-size: 0.95rem; justify-content: center; margin-top: 0.5rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                Rebuild & Sign APK Now
+              </button>
             </div>
-            <div style="background: rgba(0, 0, 0, 0.4); border-radius: 6px; padding: 0.5rem 0.75rem; font-family: var(--font-mono); font-size: 0.75rem; color: #a7f3d0; display: flex; align-items: center; justify-content: space-between;">
-              <span id="rebuildAdbCmd">adb install -r output.apk</span>
-              <button id="btnCopyAdbCmd" class="btn btn-secondary" style="padding: 0.15rem 0.5rem; font-size: 0.7rem;">Copy</button>
+            <div class="console-col">
+              <h3 class="section-title">Build & Keystore Console</h3>
+              <div class="terminal-box">
+                <div class="terminal-header">
+                  <span class="term-dot red"></span>
+                  <span class="term-dot yellow"></span>
+                  <span class="term-dot green"></span>
+                  <span style="margin-left: 0.5rem; font-family: var(--font-mono); font-size: 0.75rem;">APKFLOW SIGNER ENGINE v2.0 (RSA-2048 / SHA-256)</span>
+                </div>
+                <div id="rebuildLogs" class="terminal-body">
+                  <div class="term-line" style="color: var(--text-muted);">[Ready] Select your desired security patches and click "Rebuild & Sign APK Now".</div>
+                </div>
+              </div>
+              <div id="rebuildOutputCard" class="rebuild-result-card" style="display: none;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                  <div>
+                    <h4 id="rebuildSuccessTitle" style="font-size: 1.1rem; font-weight: 700; color: #fff;">Modded APK Ready</h4>
+                    <p id="rebuildMetaInfo" style="font-size: 0.8rem; color: var(--text-secondary); font-family: var(--font-mono);">Signed with Android Debug Keystore</p>
+                  </div>
+                  <a id="btnDownloadRebuiltApk" href="#" class="btn btn-primary" download style="text-decoration: none;">
+                    Download Modded APK
+                  </a>
+                </div>
+                <div class="cmd-copy-box">
+                  <span id="rebuildAdbCmd">adb install -r output.apk</span>
+                  <button id="btnCopyAdbCmd" class="btn btn-secondary" style="padding: 0.2rem 0.6rem; font-size: 0.72rem;">Copy</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Modal: AI Agent Copilot -->
-  <div id="modal-agent" class="full-modal">
-    <div class="modal-content-wrapper" style="max-width: 1200px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
-        <div>
-          <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <h2 style="font-size: 1.5rem; font-weight: 700;">ApkFlow Autonomous AI Agent</h2>
-            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 9999px;">
-              🟢 Ready (Local Zero-Config + LLM Powered)
-            </span>
-          </div>
-          <p style="color: var(--text-secondary); font-size: 0.88rem;">Give natural language commands to inspect code, apply patches across DEX and XML, and rebuild the APK automatically.</p>
-        </div>
-        <button class="btn btn-secondary btn-close-modal">✕ Close</button>
-      </div>
-
-      <div class="agent-chat-wrapper">
-        <div class="agent-chat-header">
-          <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <div class="agent-avatar agent-avatar-bot">AI</div>
+      <!-- View 8: Frida Dynamic Instrumentation Studio -->
+      <div id="view-frida" class="workspace-pane">
+        <div class="pane-content-wrapper">
+          <div class="pane-header-row">
             <div>
-              <strong style="font-size: 0.88rem; color: #fff;">ApkFlow Reverse-Engineering Copilot</strong>
-              <div style="font-size: 0.75rem; color: var(--text-muted);">Autonomous Bytecode Analyst & Patch Synthesizer</div>
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <h2 class="pane-title">Frida Dynamic Instrumentation Studio</h2>
+                <span class="badge-tag" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;">Runtime Hooking Suite</span>
+              </div>
+              <p class="pane-subtitle">Synthesize, inspect, and deploy custom Frida JavaScript hooks tailored to this application's bytecode and native JNI libraries.</p>
             </div>
           </div>
-          <button id="btnConfigureApiKey" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.3rem 0.7rem;">
-            ⚙️ Optional API Key
-          </button>
-        </div>
-
-        <div id="agentChatMessages" class="agent-messages-container">
-          <!-- Initial Welcome Message from Bot -->
-          <div class="agent-msg-row agent-msg-bot">
-            <div class="agent-avatar agent-avatar-bot">AI</div>
-            <div class="agent-msg-bubble">
-              <p style="margin-bottom: 0.6rem;"><strong>Hello! I am your ApkFlow AI Modder Agent.</strong></p>
-              <p style="color: var(--text-secondary); font-size: 0.84rem; margin-bottom: 0.75rem;">
-                I can understand your app's bytecode, identify root/tamper and SSL pinning protections, generate unified code diffs, and automatically rebuild and sign a new APK for you.
-              </p>
-              <p style="font-size: 0.8rem; color: var(--accent-cyan); font-weight: 600;">Click any quick suggestion or type your own custom instruction below:</p>
-
-              <div class="prompt-chips-row">
-                <button class="prompt-chip" data-agent-prompt="Bypass all root detection and SSL certificate pinning, then rebuild and sign the APK.">
-                  ⚡ Bypass Root & SSL Pinning
-                </button>
-                <button class="prompt-chip" data-agent-prompt="Redirect all backend API endpoints to http://127.0.0.1:8080 and rebuild APK.">
-                  🌐 Redirect API to http://127.0.0.1:8080
-                </button>
-                <button class="prompt-chip" data-agent-prompt="Make the app debuggable with android:debuggable='true' and remove telemetry trackers.">
-                  🐞 Make Debuggable & Remove Trackers
-                </button>
-                <button class="prompt-chip" data-agent-prompt="الغاء كشف الروت وتخطي SSL بينينج وتغيير رابط السيرفر الى https://proxy.myserver.com ثم اعادة البناء">
-                  🇸🇦 تخطي الروت والشهادات واعادة البناء
-                </button>
-                <button class="prompt-chip" data-agent-prompt="Explain how cryptographic signatures are created and generate a Python reproduction script.">
-                  🔐 Explain Crypto Signatures & Rebuild
-                </button>
+          <div class="frida-grid-layout">
+            <div class="frida-sidebar">
+              <span class="section-label">Modules</span>
+              <button class="frida-module-btn active" data-frida-mod="all">⚡ All-in-One Agent</button>
+              <button class="frida-module-btn" data-frida-mod="root">🛡️ Root Detection Bypass</button>
+              <button class="frida-module-btn" data-frida-mod="ssl">🔓 SSL Pinning Bypass (OkHttp)</button>
+              <button class="frida-module-btn" data-frida-mod="crypto">🔐 Crypto Cipher & Key Spy</button>
+              <button class="frida-module-btn" data-frida-mod="native">🔧 Native C++ JNI Memory Hook</button>
+              <button class="frida-module-btn" data-frida-mod="tracer">📱 Activity Lifecycle Tracer</button>
+              <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
+                <span class="section-label">Quick Spawn Commands</span>
+                <div class="cmd-copy-box" style="margin-top: 0.5rem;">
+                  <span id="fridaCmdSpawn">frida -U -f app -l agent.js</span>
+                  <button class="btn btn-secondary btn-copy-cmd" data-target="fridaCmdSpawn" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">Copy</button>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div class="agent-chat-input-bar">
-          <textarea id="agentPromptInput" class="agent-input-textarea" placeholder="Ask the AI agent: e.g. 'Bypass root check, change API URL to http://10.0.2.2:8080 and rebuild' (Arabic & English supported)..." rows="1"></textarea>
-          <button id="btnSendAgentPrompt" class="btn btn-primary" style="height: 48px; padding: 0 1.25rem;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-            Send
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: Full SDK Generator -->
-  <div id="modal-code" class="full-modal">
-    <div class="modal-content-wrapper">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
-        <div>
-          <h2 style="font-size: 1.5rem; font-weight: 700;">Full Client SDK Generator</h2>
-          <p style="color: var(--text-secondary); font-size: 0.9rem;">Complete, ready-to-execute API client script tailored to this app's authentication and signature requirements.</p>
-        </div>
-        <button class="btn btn-secondary btn-close-modal">✕ Close</button>
-      </div>
-
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-        <div style="display: flex; gap: 0.5rem;">
-          <button class="btn btn-primary active-code-lang" data-sdk-lang="typescript">TypeScript (Node.js)</button>
-          <button class="btn btn-secondary" data-sdk-lang="python">Python</button>
-          <button class="btn btn-secondary" data-sdk-lang="curl">cURL Command</button>
-        </div>
-        <button id="btnCopyFullSdk" class="btn btn-primary">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-          Copy Entire Client
-        </button>
-      </div>
-
-      <div class="code-box">
-        <div class="code-header-bar">
-          <span id="fullSdkLabel">TypeScript Client SDK (fetch / node:crypto)</span>
-          <span>Zero External Dependencies Required</span>
-        </div>
-        <pre class="code-pre-area"><code id="fullSdkCode">// Loading SDK...</code></pre>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: All Endpoints -->
-  <div id="modal-endpoints" class="full-modal">
-    <div class="modal-content-wrapper">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
-        <div>
-          <h2 style="font-size: 1.5rem; font-weight: 700;">Discovered API Endpoints</h2>
-          <p style="color: var(--text-secondary); font-size: 0.9rem;">All HTTP/REST endpoints extracted from DEX bytecode and annotations.</p>
-        </div>
-        <button class="btn btn-secondary btn-close-modal">✕ Close</button>
-      </div>
-
-      <div style="margin-bottom: 1rem;">
-        <input type="text" id="modalEndpointSearch" placeholder="Filter endpoints (e.g. /auth, /wallet, POST)..." 
-          style="background: #111726; border: 1px solid var(--border-subtle); color: #fff; padding: 0.65rem 1rem; border-radius: 8px; width: 350px; font-size: 0.88rem; font-family: var(--font-sans);">
-      </div>
-
-      <div style="background: var(--bg-node); border: 1px solid var(--border-subtle); border-radius: 12px; overflow: hidden;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
-          <thead>
-            <tr style="border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); text-align: left;">
-              <th style="padding: 0.85rem 1rem;">Method</th>
-              <th style="padding: 0.85rem 1rem;">Path</th>
-              <th style="padding: 0.85rem 1rem;">Domain</th>
-              <th style="padding: 0.85rem 1rem;">Auth Type</th>
-              <th style="padding: 0.85rem 1rem;">Signature</th>
-              <th style="padding: 0.85rem 1rem;">Action</th>
-            </tr>
-          </thead>
-          <tbody id="modalEndpointBody">
-            <!-- Populated -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: Security Audit -->
-  <div id="modal-security" class="full-modal">
-    <div class="modal-content-wrapper">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
-        <div>
-          <h2 style="font-size: 1.5rem; font-weight: 700;">Security & Cryptographic Audit</h2>
-          <p style="color: var(--text-secondary); font-size: 0.9rem;">Reverse-engineering evaluation of protections, defenses, and encryption algorithms.</p>
-        </div>
-        <button class="btn btn-secondary btn-close-modal">✕ Close</button>
-      </div>
-
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-        <!-- Root Card -->
-        <div style="background: var(--bg-node); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1.25rem;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-            <h4 style="font-size: 1.1rem; font-weight: 700;">Root & Tamper Detection</h4>
-            <span id="auditRootBadge" class="badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171;">DETECTED</span>
-          </div>
-          <ul id="auditRootList" style="margin-left: 1.25rem; color: var(--text-secondary); font-size: 0.88rem; line-height: 1.7; margin-bottom: 1rem;"></ul>
-          <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; padding: 0.75rem; font-size: 0.85rem; color: #fca5a5;">
-            <strong>Frida Bypass:</strong> <span id="auditRootBypass">Hook RootBeer methods to return false.</span>
-          </div>
-        </div>
-
-        <!-- SSL Pinning Card -->
-        <div style="background: var(--bg-node); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1.25rem;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-            <h4 style="font-size: 1.1rem; font-weight: 700;">SSL / TLS Certificate Pinning</h4>
-            <span id="auditSslBadge" class="badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171;">ENFORCED</span>
-          </div>
-          <ul id="auditSslList" style="margin-left: 1.25rem; color: var(--text-secondary); font-size: 0.88rem; line-height: 1.7; margin-bottom: 1rem;"></ul>
-          <div style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 8px; padding: 0.75rem; font-size: 0.85rem; color: #a5b4fc;">
-            <strong>Frida Bypass:</strong> <span id="auditSslBypass">Hook CertificatePinner.check().</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Crypto Primitives -->
-      <div style="background: var(--bg-node); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1.25rem;">
-        <h4 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem;">Cryptographic Primitives Found in Bytecode & Native JNI</h4>
-        <div id="auditCryptoList"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: Blueprint -->
-  <div id="modal-blueprint" class="full-modal">
-    <div class="modal-content-wrapper">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
-        <div>
-          <h2 style="font-size: 1.5rem; font-weight: 700;">Reconstruction Blueprint</h2>
-          <p style="color: var(--text-secondary); font-size: 0.9rem;">Detailed architecture breakdown and step-by-step reproduction instructions.</p>
-        </div>
-        <button class="btn btn-secondary btn-close-modal">✕ Close</button>
-      </div>
-
-      <div style="background: var(--bg-node); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
-        <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--accent-cyan); margin-bottom: 0.5rem;">How It Works In Plain English</h3>
-        <p id="blueprintPlainEnglish" style="color: var(--text-secondary); line-height: 1.7; font-size: 0.92rem;"></p>
-      </div>
-
-      <div id="blueprintStepsList"></div>
-    </div>
-  </div>
-
-  <!-- Modal: Frida Dynamic Studio -->
-  <div id="modal-frida" class="full-modal">
-    <div class="modal-content-wrapper" style="max-width: 1350px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
-        <div>
-          <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <h2 style="font-size: 1.5rem; font-weight: 700;">Frida Dynamic Instrumentation Studio</h2>
-            <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 9999px;">
-              Runtime Hooking Suite
-            </span>
-          </div>
-          <p style="color: var(--text-secondary); font-size: 0.88rem;">Synthesize, inspect, and deploy custom Frida JavaScript hooks tailored to this application's bytecode and native JNI libraries.</p>
-        </div>
-        <button class="btn btn-secondary btn-close-modal">✕ Close</button>
-      </div>
-
-      <div class="frida-layout">
-        <!-- Sidebar Modules -->
-        <div class="frida-sidebar-card">
-          <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">Instrumentation Modules</span>
-          <button class="frida-module-btn active" data-frida-mod="all">
-            <span>⚡</span> All-in-One Comprehensive Agent
-          </button>
-          <button class="frida-module-btn" data-frida-mod="root">
-            <span>🛡️</span> Root Detection Bypass Hook
-          </button>
-          <button class="frida-module-btn" data-frida-mod="ssl">
-            <span>🔓</span> SSL Pinning Bypass (OkHttp)
-          </button>
-          <button class="frida-module-btn" data-frida-mod="crypto">
-            <span>🔐</span> Cryptographic Key & Cipher Spy
-          </button>
-          <button class="frida-module-btn" data-frida-mod="native">
-            <span>🔧</span> Native C++ JNI Memory Hook
-          </button>
-          <button class="frida-module-btn" data-frida-mod="tracer">
-            <span>📱</span> Activity Lifecycle Tracer
-          </button>
-
-          <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
-            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Quick Spawn Commands</span>
-            <div style="margin-top: 0.5rem;">
-              <div class="cli-command-box">
-                <span id="fridaCmdSpawn">frida -U -f com.app -l agent.js</span>
-                <button class="btn btn-secondary btn-copy-cmd" data-cmd-target="fridaCmdSpawn" style="padding: 0.15rem 0.45rem; font-size: 0.68rem;">Copy</button>
+            <div class="frida-code-col">
+              <div class="editor-header-bar">
+                <span id="fridaScriptLabel" class="active-file-title">Frida Script — All-in-One Agent</span>
+                <div style="display: flex; gap: 0.5rem;">
+                  <button id="btnCopyFridaScript" class="btn btn-secondary" style="font-size: 0.78rem;">Copy Script</button>
+                  <button id="btnDownloadFridaScript" class="btn btn-primary" style="font-size: 0.78rem;">Download .js</button>
+                </div>
               </div>
-              <div class="cli-command-box">
-                <span id="fridaCmdObjection">objection --gadget com.app explore</span>
-                <button class="btn btn-secondary btn-copy-cmd" data-cmd-target="fridaCmdObjection" style="padding: 0.15rem 0.45rem; font-size: 0.68rem;">Copy</button>
+              <textarea id="fridaCodeArea" class="source-code-editor" spellcheck="false"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- View 9: API Sandbox & Mock Gateway -->
+      <div id="view-sandbox" class="workspace-pane">
+        <div class="pane-content-wrapper">
+          <div class="pane-header-row">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <h2 class="pane-title">Interactive API Sandbox & Mock Gateway</h2>
+                <span class="badge-tag" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">Active Gateway</span>
+              </div>
+              <p class="pane-subtitle">Test and simulate calls to discovered API endpoints with realistic data, tokens, and response latencies.</p>
+            </div>
+          </div>
+          <div class="sandbox-grid-layout">
+            <div class="sandbox-left-col">
+              <label class="section-label">Target Endpoint</label>
+              <select id="sandboxEndpointSelect" class="search-input" style="margin-bottom: 1rem;"></select>
+              <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                <select id="sandboxMethodSelect" class="search-input" style="width: 110px;">
+                  <option value="GET">GET</option>
+                  <option value="POST">POST</option>
+                  <option value="PUT">PUT</option>
+                  <option value="DELETE">DELETE</option>
+                </select>
+                <input type="text" id="sandboxUrlInput" class="search-input" style="flex: 1;" placeholder="https://api...">
+              </div>
+              <label class="section-label">Request Body (JSON)</label>
+              <textarea id="sandboxRequestBody" class="source-code-editor" style="height: 180px; margin-bottom: 1rem;" placeholder="{}"></textarea>
+              <button id="btnExecuteSandboxRequest" class="btn btn-primary" style="width: 100%; padding: 0.8rem; justify-content: center;">
+                Execute Request
+              </button>
+            </div>
+            <div class="sandbox-right-col">
+              <div class="editor-header-bar">
+                <span class="active-file-title">Response</span>
+                <div style="display: flex; gap: 0.6rem; align-items: center;">
+                  <span id="sandboxResponseStatus" class="badge-tag" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">200 OK</span>
+                  <span id="sandboxResponseLatency" style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-muted);">60 ms</span>
+                </div>
+              </div>
+              <pre class="code-pre-area" style="flex: 1; margin: 0;"><code id="sandboxResponseBody">// Response payload will appear here...</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- View 10: ADB Live Device Bridge & Logcat -->
+      <div id="view-adb" class="workspace-pane">
+        <div class="pane-content-wrapper">
+          <div class="pane-header-row">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <h2 class="pane-title">ADB Live Device Bridge & Simulator</h2>
+                <span class="badge-tag" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">Device Ready</span>
+              </div>
+              <p class="pane-subtitle">Direct control of physical Android devices or virtual emulator. Deploy APKs, launch activities, and stream real-time logcat.</p>
+            </div>
+          </div>
+          <div class="device-control-bar">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <div class="device-icon-box">📱</div>
+              <div>
+                <h4 id="adbDeviceName" style="font-size: 1.1rem; font-weight: 700; color: #fff;">Google Pixel 8 Pro (Virtual Emulator)</h4>
+                <p id="adbDeviceDetails" style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono);">emulator-5554 • Android 14.0 (API 34) • arm64-v8a • Online</p>
               </div>
             </div>
-          </div>
-        </div>
-
-        <!-- Script Viewer -->
-        <div class="code-box" style="margin-top: 0; display: flex; flex-direction: column; height: 600px;">
-          <div class="code-header-bar">
-            <span id="fridaScriptLabel">Frida Agent Script (JavaScript ES6)</span>
-            <div style="display: flex; gap: 0.5rem;">
-              <button id="btnCopyFridaScript" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.65rem;">Copy Script</button>
-              <a id="btnDownloadFridaScript" href="#" download="apkflow_agent.js" class="btn btn-primary" style="font-size: 0.75rem; padding: 0.25rem 0.65rem; text-decoration: none;">Download agent.js</a>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button id="btnAdbLaunchApp" class="btn btn-primary" style="font-size: 0.82rem;">🚀 Launch App</button>
+              <button id="btnAdbStopApp" class="btn btn-secondary" style="font-size: 0.82rem;">🛑 Stop</button>
+              <button id="btnAdbClearData" class="btn btn-secondary" style="font-size: 0.82rem;">🧹 Clear Data</button>
+              <button id="btnAdbInstallApk" class="btn btn-secondary" style="font-size: 0.82rem;">📦 Install Rebuilt APK</button>
+              <button id="btnAdbStartFrida" class="btn btn-secondary" style="font-size: 0.82rem;">⚡ Inject Frida</button>
             </div>
           </div>
-          <pre class="code-pre-area" style="flex: 1; overflow-y: auto; margin: 0;"><code id="fridaCodeArea">// Generating Frida instrumentation script...</code></pre>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: API Sandbox -->
-  <div id="modal-sandbox" class="full-modal">
-    <div class="modal-content-wrapper" style="max-width: 1350px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
-        <div>
-          <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <h2 style="font-size: 1.5rem; font-weight: 700;">Interactive API Sandbox & Virtual Gateway</h2>
-            <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 9999px;">
-              Live Tester & Mock Engine
-            </span>
+          <div class="logcat-container">
+            <div class="logcat-topbar">
+              <span style="font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; color: #fff;">LIVE LOGCAT STREAM</span>
+              <div style="display: flex; gap: 0.5rem;">
+                <button id="btnRefreshLogcat" class="btn btn-secondary" style="font-size: 0.72rem; padding: 0.25rem 0.6rem;">Refresh</button>
+                <button id="btnClearLogcat" class="btn btn-secondary" style="font-size: 0.72rem; padding: 0.25rem 0.6rem;">Clear</button>
+              </div>
+            </div>
+            <div id="adbLogcatOutput" class="logcat-stream-box"></div>
           </div>
-          <p style="color: var(--text-secondary); font-size: 0.88rem;">Test and execute API calls against the built-in virtual mock gateway or live target server without risk of account lockout.</p>
         </div>
-        <button class="btn btn-secondary btn-close-modal">✕ Close</button>
       </div>
 
-      <div class="sandbox-layout">
-        <!-- Request Builder -->
-        <div class="sandbox-card">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h4 style="font-size: 1.05rem; font-weight: 700; color: #fff;">Request Builder</h4>
-            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem;">
-              <span style="color: var(--text-muted);">Target:</span>
-              <select id="sandboxModeSelect" style="background: #090d16; border: 1px solid var(--border-subtle); color: #fff; border-radius: 6px; padding: 0.25rem 0.5rem; font-size: 0.78rem; outline: none;">
-                <option value="virtual-mock">⚡ Virtual Mock Gateway</option>
-                <option value="live-server">🌐 Target Live Server</option>
-              </select>
+      <!-- View 11: Autonomous AI Agent Copilot -->
+      <div id="view-agent" class="workspace-pane">
+        <div class="pane-content-wrapper" style="max-width: 1000px; margin: 0 auto;">
+          <div class="pane-header-row">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <h2 class="pane-title">ApkFlow Autonomous AI Agent</h2>
+                <span class="badge-tag" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">🟢 Autonomous Copilot Ready</span>
+              </div>
+              <p class="pane-subtitle">Give natural language instructions (Arabic & English) to analyze bytecode, patch vulnerabilities, sanitize keys, and rebuild.</p>
             </div>
           </div>
-
-          <div>
-            <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">DISCOVERED ENDPOINTS SHORTCUT</label>
-            <select id="sandboxEndpointSelect" style="width: 100%; margin-top: 0.25rem; background: #090d16; border: 1px solid var(--border-subtle); color: #e2e8f0; border-radius: 6px; padding: 0.45rem 0.65rem; font-size: 0.82rem; font-family: var(--font-mono); outline: none;">
-              <option value="">Select an endpoint to pre-fill...</option>
-            </select>
-          </div>
-
-          <div>
-            <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">HTTP METHOD & TARGET URL</label>
-            <div style="display: flex; margin-top: 0.25rem;">
-              <select id="sandboxMethodSelect" class="method-select">
-                <option value="POST">POST</option>
-                <option value="GET">GET</option>
-                <option value="PUT">PUT</option>
-                <option value="DELETE">DELETE</option>
-              </select>
-              <input type="text" id="sandboxUrlInput" class="url-input" placeholder="https://api.example.com/v2/auth/login">
+          <div class="agent-chat-wrapper">
+            <div id="agentMessagesContainer" class="agent-messages-container">
+              <div class="chat-msg bot">
+                <div class="chat-avatar">AI</div>
+                <div class="chat-bubble">
+                  <p>Welcome to <strong>ApkFlow Copilot</strong>! I can inspect the application, patch bytecode, sanitize leaked secrets, or rewrite API hosts. Try asking:</p>
+                  <div class="agent-prompt-suggestions" style="margin-top: 0.6rem;">
+                    <button class="suggestion-chip">تخطي الروت وفك تشفير SSL ثم اعادة البناء</button>
+                    <button class="suggestion-chip">احذف جميع المفاتيح السرية الحساسة المستخرجة من المشروع</button>
+                    <button class="suggestion-chip">Redirect API to http://10.0.2.2:8080 and rebuild</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="agent-chat-input-bar">
+              <textarea id="agentPromptInput" class="agent-input-textarea" placeholder="Ask AI: e.g. 'Bypass root check, change API URL to http://10.0.2.2:8080 and rebuild' (Arabic & English supported)..." rows="1"></textarea>
+              <button id="btnSendAgentPrompt" class="btn btn-primary" style="height: 48px; padding: 0 1.25rem;">Send</button>
             </div>
           </div>
-
-          <div>
-            <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">HTTP HEADERS (JSON or Key: Value)</label>
-            <textarea id="sandboxHeadersInput" class="sandbox-textarea" placeholder='{"Content-Type": "application/json", "X-App-Version": "2.4.0"}'></textarea>
-          </div>
-
-          <div>
-            <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">REQUEST BODY (JSON)</label>
-            <textarea id="sandboxBodyInput" class="sandbox-textarea" placeholder='{"username": "demo_user", "password": "secure_password"}'></textarea>
-          </div>
-
-          <button id="btnSendSandboxRequest" class="btn btn-primary" style="justify-content: center; padding: 0.75rem; font-size: 0.95rem;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-            Send Request
-          </button>
         </div>
+      </div>
 
-        <!-- Response Viewer -->
-        <div class="sandbox-card">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h4 style="font-size: 1.05rem; font-weight: 700; color: #fff;">Response Console</h4>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <span id="sandboxResponseStatus" class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.75rem;">200 OK</span>
-              <span id="sandboxResponseLatency" class="badge" style="background: rgba(255, 255, 255, 0.05); color: var(--text-muted); font-size: 0.75rem;">0 ms</span>
+      <!-- View 12: Enterprise Export Hub -->
+      <div id="view-export" class="workspace-pane">
+        <div class="pane-content-wrapper">
+          <div class="pane-header-row">
+            <div>
+              <h2 class="pane-title">Enterprise Export Hub</h2>
+              <p class="pane-subtitle">Export discovered architecture, API specifications, and security audits into standard developer and enterprise formats.</p>
             </div>
           </div>
-
-          <div id="sandboxResponseBody" class="response-box">// Click "Send Request" to simulate or execute API call...</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: OWASP SAST Audit -->
-  <div id="modal-audit" class="full-modal">
-    <div class="modal-content-wrapper" style="max-width: 1300px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
-        <div>
-          <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <h2 style="font-size: 1.5rem; font-weight: 700;">OWASP Mobile Top 10 SAST Security Auditor</h2>
-            <span class="badge" style="background: rgba(99, 102, 241, 0.2); color: #818cf8; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 9999px;">
-              Static Code & Manifest Analysis
-            </span>
-          </div>
-          <p style="color: var(--text-secondary); font-size: 0.88rem;">Automated security audit assessing application vulnerabilities across standard OWASP Mobile vectors.</p>
-        </div>
-        <button class="btn btn-secondary btn-close-modal">✕ Close</button>
-      </div>
-
-      <!-- Score Hero Card -->
-      <div class="score-hero-card">
-        <div style="display: flex; align-items: center; gap: 1.5rem;">
-          <div id="auditGradeCircle" class="score-badge-circle">B</div>
-          <div>
-            <div style="display: flex; align-items: center; gap: 0.6rem;">
-              <h3 style="font-size: 1.35rem; font-weight: 700; color: #fff;">Security Posture Grade</h3>
-              <span id="auditRiskBadge" class="badge badge-medium">MEDIUM RISK</span>
+          <div class="export-grid">
+            <div class="export-card">
+              <div>
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">📮</div>
+                <h4 style="font-size: 1.15rem; font-weight: 700; color: #fff;">Postman Collection v2.1</h4>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.4rem; line-height: 1.6;">Complete Postman collection with organized folders, headers, authentication contracts, and sample JSON payloads.</p>
+              </div>
+              <a id="btnExportPostman" href="#" download class="btn btn-primary" style="margin-top: 1.25rem; text-decoration: none; justify-content: center;">Download Postman JSON</a>
             </div>
-            <p id="auditSummaryText" style="color: var(--text-secondary); font-size: 0.88rem; margin-top: 0.25rem;">
-              Evaluating code security, permissions, cryptographic primitives, and exported surfaces...
-            </p>
-          </div>
-        </div>
-        <div style="display: flex; gap: 1.5rem; border-left: 1px solid var(--border-subtle); padding-left: 2rem;">
-          <div style="text-align: center;">
-            <div id="metricCriticalCount" style="font-size: 1.75rem; font-weight: 800; color: #f87171;">0</div>
-            <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700;">CRITICAL</span>
-          </div>
-          <div style="text-align: center;">
-            <div id="metricHighCount" style="font-size: 1.75rem; font-weight: 800; color: #fb923c;">0</div>
-            <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700;">HIGH</span>
-          </div>
-          <div style="text-align: center;">
-            <div id="metricMediumCount" style="font-size: 1.75rem; font-weight: 800; color: #facc15;">0</div>
-            <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700;">MEDIUM</span>
-          </div>
-          <div style="text-align: center;">
-            <div id="metricLowCount" style="font-size: 1.75rem; font-weight: 800; color: #60a5fa;">0</div>
-            <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700;">LOW</span>
+            <div class="export-card">
+              <div>
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">🌐</div>
+                <h4 style="font-size: 1.15rem; font-weight: 700; color: #fff;">OpenAPI 3.0.3 Specification</h4>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.4rem; line-height: 1.6;">Standard OpenAPI 3.0 specification JSON file compatible with Swagger UI, Burp Suite, and Insomnia.</p>
+              </div>
+              <a id="btnExportOpenApi" href="#" download class="btn btn-primary" style="margin-top: 1.25rem; text-decoration: none; justify-content: center;">Download OpenAPI Spec</a>
+            </div>
+            <div class="export-card">
+              <div>
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
+                <h4 style="font-size: 1.15rem; font-weight: 700; color: #fff;">Standalone Executive HTML Report</h4>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.4rem; line-height: 1.6;">Self-contained offline HTML security audit report with vulnerability findings, scorecards, and remediation blueprint.</p>
+              </div>
+              <a id="btnExportReport" href="#" download class="btn btn-primary" style="margin-top: 1.25rem; text-decoration: none; justify-content: center;">Download HTML Report</a>
+            </div>
+            <div class="export-card">
+              <div>
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">📦</div>
+                <h4 style="font-size: 1.15rem; font-weight: 700; color: #fff;">Signed & Modded APK</h4>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.4rem; line-height: 1.6;">Rebuilt APK archive with bypassed root and SSL pinning, signed with standard RSA-2048 Android Debug Keystore.</p>
+              </div>
+              <button id="btnExportApk" class="btn btn-primary" style="margin-top: 1.25rem; justify-content: center;">Go to Rebuilder Studio</button>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Vulnerabilities List -->
-      <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem; color: #fff;">Identified Vulnerabilities & Remediation Steps</h3>
-      <div id="auditVulnsList">
-        <!-- Populated dynamically -->
-      </div>
-    </div>
+    </main>
   </div>
 
-  <!-- Modal: Export Hub -->
-  <div id="modal-export" class="full-modal">
-    <div class="modal-content-wrapper" style="max-width: 1200px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
-        <div>
-          <h2 style="font-size: 1.5rem; font-weight: 700;">Enterprise Export Hub</h2>
-          <p style="color: var(--text-secondary); font-size: 0.9rem;">Export reconstructed SDKs, collections, OpenAPI specs, and executive reports in industry-standard formats.</p>
-        </div>
-        <button class="btn btn-secondary btn-close-modal">✕ Close</button>
-      </div>
-
-      <div class="export-grid">
-        <!-- Postman -->
-        <div class="export-card">
-          <div>
-            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📮</div>
-            <h4 style="font-size: 1.15rem; font-weight: 700; color: #fff;">Postman Collection v2.1</h4>
-            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.4rem; line-height: 1.6;">
-              Ready-to-import Postman JSON collection containing all discovered endpoints, auth headers, and mock variables.
-            </p>
-          </div>
-          <a id="btnExportPostman" href="#" download class="btn btn-primary" style="margin-top: 1.25rem; text-decoration: none; justify-content: center;">
-            Download Postman Collection
-          </a>
-        </div>
-
-        <!-- OpenAPI / Swagger -->
-        <div class="export-card">
-          <div>
-            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📑</div>
-            <h4 style="font-size: 1.15rem; font-weight: 700; color: #fff;">OpenAPI 3.0 / Swagger</h4>
-            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.4rem; line-height: 1.6;">
-              Standard OpenAPI 3.0 specification JSON file compatible with Swagger UI, Burp Suite, and Insomnia.
-            </p>
-          </div>
-          <a id="btnExportOpenApi" href="#" download class="btn btn-primary" style="margin-top: 1.25rem; text-decoration: none; justify-content: center;">
-            Download OpenAPI Spec
-          </a>
-        </div>
-
-        <!-- HTML Executive Report -->
-        <div class="export-card">
-          <div>
-            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
-            <h4 style="font-size: 1.15rem; font-weight: 700; color: #fff;">Standalone Executive HTML Report</h4>
-            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.4rem; line-height: 1.6;">
-              Self-contained offline HTML security audit report with vulnerability findings, scorecards, and remediation blueprint.
-            </p>
-          </div>
-          <a id="btnExportReport" href="#" download class="btn btn-primary" style="margin-top: 1.25rem; text-decoration: none; justify-content: center;">
-            Download HTML Audit Report
-          </a>
-        </div>
-
-        <!-- Rebuilt APK -->
-        <div class="export-card">
-          <div>
-            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📦</div>
-            <h4 style="font-size: 1.15rem; font-weight: 700; color: #fff;">Signed & Modded APK</h4>
-            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.4rem; line-height: 1.6;">
-              Rebuilt APK archive with bypassed root and SSL pinning, signed with standard RSA-2048 Android Debug Keystore.
-            </p>
-          </div>
-          <a id="btnExportApk" href="#" class="btn btn-primary" style="margin-top: 1.25rem; text-decoration: none; justify-content: center;">
-            Generate & Download APK
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: Secret Vault Hunter -->
-  <div id="modal-secrets" class="full-modal">
-    <div class="modal-content-wrapper" style="max-width: 1350px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
-        <div>
-          <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <h2 style="font-size: 1.5rem; font-weight: 700;">Sensitive Data & Secret Vault Hunter</h2>
-            <span id="secretOverallBadge" class="badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 9999px;">
-              0 Found
-            </span>
-          </div>
-          <p style="color: var(--text-secondary); font-size: 0.88rem;">Scans DEX bytecode, strings.xml, manifest, and assets for hardcoded credentials, cloud API keys, private certificates, and high-entropy secrets.</p>
-        </div>
-        <button class="btn btn-secondary btn-close-modal">✕ Close</button>
-      </div>
-
-      <!-- Stats Grid -->
-      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
-        <div style="background: var(--bg-node); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 1rem; text-align: center;">
-          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Total Secrets</div>
-          <div id="secretTotalCount" style="font-size: 1.8rem; font-weight: 800; color: #fff; margin-top: 0.25rem;">0</div>
-        </div>
-        <div style="background: var(--bg-node); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 10px; padding: 1rem; text-align: center;">
-          <div style="font-size: 0.75rem; color: #f87171; text-transform: uppercase;">Critical Severity</div>
-          <div id="secretCriticalCount" style="font-size: 1.8rem; font-weight: 800; color: #ef4444; margin-top: 0.25rem;">0</div>
-        </div>
-        <div style="background: var(--bg-node); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 10px; padding: 1rem; text-align: center;">
-          <div style="font-size: 0.75rem; color: #fbbf24; text-transform: uppercase;">High Severity</div>
-          <div id="secretHighCount" style="font-size: 1.8rem; font-weight: 800; color: #f59e0b; margin-top: 0.25rem;">0</div>
-        </div>
-        <div style="background: var(--bg-node); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 1rem; text-align: center;">
-          <div style="font-size: 0.75rem; color: #34d399; text-transform: uppercase;">Risk Level</div>
-          <div id="secretRiskLevel" style="font-size: 1.8rem; font-weight: 800; color: #10b981; margin-top: 0.25rem;">LOW</div>
-        </div>
-      </div>
-
-      <!-- Search & Filter -->
-      <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-        <input type="text" id="secretSearchInput" class="sources-search-box" style="flex: 1;" placeholder="Filter secrets by title, type, or file path...">
-        <button id="btnAiRedactAllSecrets" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.45rem 1rem;">
-          🤖 1-Click Redact with AI Agent
-        </button>
-      </div>
-
-      <!-- Secret List Table Container -->
-      <div id="secretListContainer" style="display: flex; flex-direction: column; gap: 0.85rem; max-height: 520px; overflow-y: auto;">
-        <!-- Populated dynamically -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: Native ELF Binary & JNI Inspector -->
-  <div id="modal-elf" class="full-modal">
-    <div class="modal-content-wrapper" style="max-width: 1350px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
-        <div>
-          <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <h2 style="font-size: 1.5rem; font-weight: 700;">Native Binary & ELF / JNI Inspector</h2>
-            <span id="elfTotalLibsBadge" class="badge" style="background: rgba(168, 85, 247, 0.2); color: #c084fc; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 9999px;">
-              Shared Objects (.so)
-            </span>
-          </div>
-          <p style="color: var(--text-secondary); font-size: 0.88rem;">Dissects compiled C/C++ native libraries (.so) inside lib/arm64-v8a. Analyzes ELF headers, exported JNI bridges, stack canaries, and strings.</p>
-        </div>
-        <button class="btn btn-secondary btn-close-modal">✕ Close</button>
-      </div>
-
-      <div id="elfContentContainer" style="display: flex; flex-direction: column; gap: 1.5rem;">
-        <!-- Populated dynamically -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: Deep Link & Intent Matrix -->
-  <div id="modal-intent" class="full-modal">
-    <div class="modal-content-wrapper" style="max-width: 1350px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
-        <div>
-          <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <h2 style="font-size: 1.5rem; font-weight: 700;">Deep Link & Intent-Filter Security Matrix</h2>
-            <span id="intentTotalBadge" class="badge" style="background: rgba(234, 179, 8, 0.2); color: #facc15; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 9999px;">
-              Active Schemes
-            </span>
-          </div>
-          <p style="color: var(--text-secondary); font-size: 0.88rem;">Audits custom URI schemes (e.g. quickpay://) vs verified Android App Links. Identifies scheme hijacking risks and open intent redirects.</p>
-        </div>
-        <button class="btn btn-secondary btn-close-modal">✕ Close</button>
-      </div>
-
-      <!-- Intent Stats -->
-      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
-        <div style="background: var(--bg-node); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 1rem; text-align: center;">
-          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Total Deep Links</div>
-          <div id="intentTotalCount" style="font-size: 1.8rem; font-weight: 800; color: #fff; margin-top: 0.25rem;">0</div>
-        </div>
-        <div style="background: var(--bg-node); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 10px; padding: 1rem; text-align: center;">
-          <div style="font-size: 0.75rem; color: #f87171; text-transform: uppercase;">Custom Schemes (High Risk)</div>
-          <div id="intentCustomCount" style="font-size: 1.8rem; font-weight: 800; color: #ef4444; margin-top: 0.25rem;">0</div>
-        </div>
-        <div style="background: var(--bg-node); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 1rem; text-align: center;">
-          <div style="font-size: 0.75rem; color: #34d399; text-transform: uppercase;">App Links (HTTPS)</div>
-          <div id="intentAppLinksCount" style="font-size: 1.8rem; font-weight: 800; color: #10b981; margin-top: 0.25rem;">0</div>
-        </div>
-        <div style="background: var(--bg-node); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 10px; padding: 1rem; text-align: center;">
-          <div style="font-size: 0.75rem; color: #fbbf24; text-transform: uppercase;">Unverified Domains</div>
-          <div id="intentUnverifiedCount" style="font-size: 1.8rem; font-weight: 800; color: #f59e0b; margin-top: 0.25rem;">0</div>
-        </div>
-      </div>
-
-      <!-- Intent List -->
-      <div id="intentListContainer" style="display: flex; flex-direction: column; gap: 0.85rem; max-height: 520px; overflow-y: auto;">
-        <!-- Populated dynamically -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: ADB Live Device Bridge & Simulator -->
-  <div id="modal-adb" class="full-modal">
-    <div class="modal-content-wrapper" style="max-width: 1350px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
-        <div>
-          <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <h2 style="font-size: 1.5rem; font-weight: 700;">ADB Live Device Bridge & Simulator</h2>
-            <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 9999px;">
-              Device Connected
-            </span>
-          </div>
-          <p style="color: var(--text-secondary); font-size: 0.88rem;">Direct control of physical Android devices or high-fidelity virtual emulator. Deploy APKs, trigger intent tests, and stream real-time logcat.</p>
-        </div>
-        <button class="btn btn-secondary btn-close-modal">✕ Close</button>
-      </div>
-
-      <!-- Device Bar & Quick Actions -->
-      <div style="background: var(--bg-node); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between;">
-        <div style="display: flex; align-items: center; gap: 1rem;">
-          <div style="width: 48px; height: 48px; border-radius: 10px; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
-            📱
-          </div>
-          <div>
-            <h4 id="adbDeviceName" style="font-size: 1.15rem; font-weight: 700; color: #fff;">Google Pixel 8 Pro (Virtual Emulator)</h4>
-            <p id="adbDeviceDetails" style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono);">emulator-5554 • Android 14.0 (API 34) • arm64-v8a • Online</p>
-          </div>
-        </div>
-
-        <div style="display: flex; gap: 0.5rem;">
-          <button id="btnAdbLaunchApp" class="btn btn-primary" style="font-size: 0.82rem; padding: 0.45rem 0.85rem;">
-            🚀 Launch App
-          </button>
-          <button id="btnAdbStopApp" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.45rem 0.85rem;">
-            🛑 Force Stop
-          </button>
-          <button id="btnAdbClearData" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.45rem 0.85rem;">
-            🧹 Clear Data
-          </button>
-          <button id="btnAdbInstallApk" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.45rem 0.85rem; border-color: rgba(99, 102, 241, 0.4); color: #818cf8;">
-            📦 Install Modded APK
-          </button>
-          <button id="btnAdbStartFrida" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.45rem 0.85rem; border-color: rgba(245, 158, 11, 0.4); color: #fbbf24;">
-            ⚡ Inject Frida
-          </button>
-        </div>
-      </div>
-
-      <!-- Logcat Console -->
-      <div style="background: #060911; border: 1px solid var(--border-subtle); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
-        <div style="background: #090e18; border-bottom: 1px solid var(--border-subtle); padding: 0.6rem 1rem; display: flex; align-items: center; justify-content: space-between;">
-          <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <span style="font-family: var(--font-mono); font-size: 0.8rem; color: #fff; font-weight: 700;">LIVE LOGCAT STREAM</span>
-            <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-size: 0.7rem;">Active Filter: com.quickpay.wallet</span>
-          </div>
-          <div style="display: flex; gap: 0.5rem;">
-            <button id="btnRefreshLogcat" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">Refresh</button>
-            <button id="btnClearLogcat" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">Clear</button>
-          </div>
-        </div>
-        <div id="adbLogcatOutput" style="height: 380px; overflow-y: auto; padding: 0.85rem 1rem; font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.7; background: #060911;">
-          <!-- Logcat items populated here -->
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal: Unified Code Diff Viewer -->
-  <div id="modal-diff" class="full-modal">
-    <div class="modal-content-wrapper" style="max-width: 1350px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
-        <div>
-          <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <h2 style="font-size: 1.5rem; font-weight: 700;">Unified Code Diff & Modding Inspector</h2>
-            <span id="diffStatsBadge" class="badge" style="background: rgba(99, 102, 241, 0.2); color: #818cf8; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 9999px;">
-              Original vs Patched
-            </span>
-          </div>
-          <p id="diffSubtitle" style="color: var(--text-secondary); font-size: 0.88rem;">Review exact additions and deletions made to the decompiled codebase before repacking.</p>
-        </div>
-        <button class="btn btn-secondary btn-close-modal">✕ Close</button>
-      </div>
-
-      <div id="diffViewerContainer" style="background: #090e18; border: 1px solid var(--border-subtle); border-radius: 12px; overflow: hidden; font-family: var(--font-mono); font-size: 0.82rem;">
-        <!-- Diff lines populated here -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast Notice -->
+  <!-- Toast Notification -->
   <div id="toastNotice" class="toast-notice">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-    <span id="toastMessage">Copied!</span>
+    <span id="toastMessage">Success</span>
   </div>
 
   <script src="app.js"></script>

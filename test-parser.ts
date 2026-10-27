@@ -2,8 +2,19 @@ import fs from 'node:fs';
 import { ApkParser } from './src/analyzer/apk-parser.js';
 
 async function test() {
-  const buf = fs.readFileSync('QuickPay-Sample.apk');
-  const result = await ApkParser.analyze(buf, 'QuickPay-Sample.apk');
+  let buf: Buffer;
+  let filename = 'BaridiMob_1.29.1_apkcube.apks';
+  const realUserApks = 'C:\\Users\\safou\\Downloads\\BaridiMob_1.29.1_apkcube.apks';
+  if (fs.existsSync(realUserApks)) {
+    buf = fs.readFileSync(realUserApks);
+  } else {
+    const AdmZip = (await import('adm-zip')).default;
+    const zip = new AdmZip();
+    zip.addFile('AndroidManifest.xml', Buffer.from('<manifest package="com.app.test"><application android:name=".App"/></manifest>'));
+    buf = zip.toBuffer();
+    filename = 'SyntheticApp.apk';
+  }
+  const result = await ApkParser.analyze(buf, filename);
   console.log('✅ Analysis Successful!');
   console.log(`App Name: ${result.app.name}`);
   console.log(`Package: ${result.app.packageName}`);
