@@ -1,7 +1,7 @@
 {
   "name": "apkflow",
-  "version": "1.0.0",
-  "description": "Visual Mobile App Reverse-Engineering & Architecture Reconstruction Tool",
+  "version": "2.0.0",
+  "description": "Visual Mobile App Reverse-Engineering, Source Code Decompiler, Rebuilder & Autonomous AI Modding Agent",
   "main": "dist/server.js",
   "type": "module",
   "bin": {
@@ -10,6 +10,7 @@
   "scripts": {
     "start": "tsx src/cli.ts",
     "dev": "tsx watch src/cli.ts",
+    "test": "tsx test-backend-features.ts",
     "build:server": "tsc",
     "build:client": "cd client && npm run build",
     "build": "npm run build:server && npm run build:client",
