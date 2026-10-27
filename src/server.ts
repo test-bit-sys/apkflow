@@ -16,6 +16,7 @@ import { SecretHunter } from './analyzer/secret-hunter.js';
 import { ElfInspector } from './analyzer/elf-inspector.js';
 import { IntentInspector } from './analyzer/intent-inspector.js';
 import { AdbBridge } from './analyzer/adb-bridge.js';
+import { ApkBundleResolver } from './analyzer/apk-bundle-resolver.js';
 import AdmZip from 'adm-zip';
 
 // Support up to 2GB APK uploads using temporary disk buffer
@@ -110,15 +111,17 @@ export function createApp() {
       const sizeMb = (req.file.size / 1024 / 1024).toFixed(1);
       console.log(`[ApkFlow] Analyzing uploaded APK: ${req.file.originalname} (${sizeMb} MB)...`);
 
-      const fileBuffer = fs.readFileSync(tempPath);
-      const result = await ApkParser.analyze(fileBuffer, req.file.originalname);
+      const rawBuffer = fs.readFileSync(tempPath);
+      const bundleInfo = ApkBundleResolver.resolve(rawBuffer, req.file.originalname);
+      const activeBuffer = bundleInfo.buffer;
+      const result = await ApkParser.analyze(activeBuffer, req.file.originalname);
 
       // Cache analysis, buffer, and extract source files
       analysesCache.set(result.id, result);
-      apkBuffersCache.set(result.id, fileBuffer);
+      apkBuffersCache.set(result.id, activeBuffer);
 
       try {
-        const sources = SourceExtractor.extract(fileBuffer, result);
+        const sources = SourceExtractor.extract(activeBuffer, result);
         sourcesCache.set(result.id, sources);
       } catch (srcErr) {
         console.warn('[ApkFlow] Warning extracting sources:', srcErr);

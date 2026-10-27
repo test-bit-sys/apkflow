@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import AdmZip from 'adm-zip';
 import { ApkSigner } from './apk-signer.js';
+import { ApkBundleResolver } from './apk-bundle-resolver.js';
 
 export interface RebuildOptions {
   bypassRoot?: boolean;
@@ -40,7 +41,13 @@ export class ApkRebuilder {
     logs.push(`${timestamp()} ⚡ ApkFlow Rebuilder Engine v2.0 Initialized`);
     logs.push(`${timestamp()} 📦 Loading APK archive (${(originalBuffer.length / 1024 / 1024).toFixed(2)} MB)...`);
 
-    const zip = new AdmZip(originalBuffer);
+    const resolved = ApkBundleResolver.resolve(originalBuffer, appName);
+    const activeBuffer = resolved.buffer;
+    if (resolved.isBundle) {
+      logs.push(`${timestamp()} 📦 Unpacked ${resolved.bundleType?.toUpperCase()} split bundle (primary base: ${resolved.baseApkName})`);
+    }
+
+    const zip = new AdmZip(activeBuffer);
     const buildId = `build_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
     // 1. Apply Preset Patches

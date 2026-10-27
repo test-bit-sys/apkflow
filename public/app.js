@@ -672,7 +672,8 @@ function setupUploadAndDemos() {
   canvasContainer.addEventListener('drop', (e) => {
     e.preventDefault();
     const files = e.dataTransfer.files;
-    if (files.length > 0 && files[0].name.endsWith('.apk')) {
+    const validExts = ['.apk', '.apks', '.xapk', '.apkm', '.zip'];
+    if (files.length > 0 && validExts.some(ext => files[0].name.toLowerCase().endsWith(ext))) {
       uploadApk(files[0]);
     }
   });
@@ -680,7 +681,7 @@ function setupUploadAndDemos() {
 
 // Upload APK to Server
 async function uploadApk(file) {
-  showToast(`Analyzing ${file.name}...`);
+  showToast(`Uploading & analyzing ${file.name}...`);
   const formData = new FormData();
   formData.append('apk', file);
 
@@ -691,15 +692,23 @@ async function uploadApk(file) {
     });
 
     if (!res.ok) {
-      throw new Error(await res.text());
+      let errorMsg = 'Failed to analyze application.';
+      try {
+        const errJson = await res.json();
+        errorMsg = errJson.error || errorMsg;
+      } catch {
+        errorMsg = await res.text();
+      }
+      throw new Error(errorMsg);
     }
 
     const result = await res.json();
     renderAnalysis(result);
-    showToast(`Analysis complete: ${result.app.name}!`);
+    showToast(`Analysis complete: ${result.app.name} (${result.app.packageName})!`);
   } catch (err) {
     console.error('Analysis failed:', err);
-    alert(`Analysis error: ${err.message}`);
+    showToast(`❌ Error: ${err.message}`);
+    alert(`ApkFlow Analysis Error:\n\n${err.message}`);
   }
 }
 

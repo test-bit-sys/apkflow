@@ -1,5 +1,6 @@
 import AdmZip from 'adm-zip';
 import { AnalysisResult, DiscoveredEndpoint, SecurityDossier } from '../types/index.js';
+import { ApkBundleResolver } from './apk-bundle-resolver.js';
 
 export interface SourceFileNode {
   path: string;
@@ -29,7 +30,9 @@ export class SourceExtractor {
     analysis: AnalysisResult
   ): ExtractedSourceProject {
     const files: Record<string, string> = {};
-    const zip = new AdmZip(apkBuffer);
+    const resolved = ApkBundleResolver.resolve(apkBuffer, analysis.app.name);
+    const activeBuffer = resolved.buffer;
+    const zip = new AdmZip(activeBuffer);
     const zipEntries = zip.getEntries();
 
     // 1. AndroidManifest.xml

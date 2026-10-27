@@ -6,11 +6,16 @@ import { DexScanner } from './dex-scanner.js';
 import { FrameworkDetector } from './framework-detector.js';
 import { FlowBuilder } from './flow-builder.js';
 import { CodeGenerator } from './code-generator.js';
+import { ApkBundleResolver } from './apk-bundle-resolver.js';
 
 export class ApkParser {
   public static async analyze(buffer: Buffer, originalFilename: string = 'app.apk'): Promise<AnalysisResult> {
-    const sha256 = crypto.createHash('sha256').update(buffer).digest('hex');
-    const zip = new AdmZip(buffer);
+    // 0. Auto-resolve Split APK bundles (.apks, .xapk, .apkm) to base APK
+    const bundleInfo = ApkBundleResolver.resolve(buffer, originalFilename);
+    const activeBuffer = bundleInfo.buffer;
+
+    const sha256 = crypto.createHash('sha256').update(activeBuffer).digest('hex');
+    const zip = new AdmZip(activeBuffer);
     const zipEntries = zip.getEntries();
     const entryNames = zipEntries.map(e => e.entryName);
 
